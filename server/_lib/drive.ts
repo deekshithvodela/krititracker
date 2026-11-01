@@ -1,4 +1,5 @@
 import { google, drive_v3 } from 'googleapis';
+import { resolveServiceAccountCredentials } from './sheets';
 
 let driveClient: drive_v3.Drive | null = null;
 
@@ -10,41 +11,11 @@ export function getGoogleDriveClient(): drive_v3.Drive {
     return driveClient;
   }
 
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) {
-    try {
-      const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64, 'base64').toString('utf-8');
-      const parsed = JSON.parse(decoded);
-      if (parsed.client_email && parsed.private_key) {
-        const auth = new google.auth.JWT({
-          email: parsed.client_email,
-          key: parsed.private_key,
-          scopes: [
-            'https://www.googleapis.com/auth/drive',
-            'https://www.googleapis.com/auth/spreadsheets',
-          ],
-        });
-        driveClient = google.drive({ version: 'v3', auth });
-        return driveClient;
-      }
-    } catch (e) {
-      console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 in drive client:', e);
-    }
-  }
-
-  if (!clientEmail || !privateKey) {
-    throw new Error(
-      'Google Service Account credentials missing for Drive API. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.'
-    );
-  }
-
-  privateKey = privateKey.replace(/\\n/g, '\n');
+  const creds = resolveServiceAccountCredentials();
 
   const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
+    email: creds.clientEmail,
+    key: creds.privateKey,
     scopes: [
       'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/spreadsheets',
@@ -54,6 +25,7 @@ export function getGoogleDriveClient(): drive_v3.Drive {
   driveClient = google.drive({ version: 'v3', auth });
   return driveClient;
 }
+
 
 /**
  * Retrieves configured Google Drive folder ID, if defined.

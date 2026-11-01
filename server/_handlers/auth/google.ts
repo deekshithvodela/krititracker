@@ -37,10 +37,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err: any) {
     console.error('Authentication error:', err.message);
+    let errorMsg = err.message || 'Authentication failed.';
+    if (errorMsg.includes('DECODER routines::unsupported')) {
+      errorMsg = 'Google Service Account Private Key format error: Ensure GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY or GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 is set in Vercel without surrounding quotes.';
+    }
     const status = err.message?.includes('Access Denied') ? 403 : 401;
     return res.status(status).json({
       success: false,
-      error: err.message || 'Authentication failed.',
+      error: errorMsg,
     });
   }
 }
+

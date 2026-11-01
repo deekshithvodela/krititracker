@@ -4,46 +4,125 @@ import type { SheetRowTeamOverview, SheetRowUser, SheetRowConfig } from './types
 
 let sheetsClient: sheets_v4.Sheets | null = null;
 
-export function getGoogleSheetsClient(): sheets_v4.Sheets {
-  if (sheetsClient) {
-    return sheetsClient;
+/**
+ * Sanitizes and normalizes Google Service Account private key strings from various environment variable formats.
+ * Handles:
+ * - Literal escaped newlines (\n, \r\n, \\n)
+ * - Surrounding double ("...") or single ('...') quotes introduced by shell or UI pastes
+ * - Full service account JSON pasted directly into GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+ * - Base64 encoded PEM keys
+ */
+export function sanitizePrivateKey(rawKey: string | undefined): string {
+  if (!rawKey) return '';
+  let key = rawKey.trim();
+
+  // If user pasted full Service Account JSON into the private key variable
+  if (key.startsWith('{') && key.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(key);
+      if (parsed.private_key) {
+        key = parsed.private_key;
+      }
+    } catch {}
   }
 
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+  // Strip wrapping quotes
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1).trim();
+  }
 
+  // Normalize escaped newlines
+  key = key.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+
+  // Strip wrapping quotes again if double-escaped
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1).trim();
+  }
+
+  // If missing standard PEM header, test if it was base64 encoded
+  if (!key.includes('-----BEGIN PRIVATE KEY-----')) {
+    try {
+      const decoded = Buffer.from(key, 'base64').toString('utf8');
+      if (decoded.includes('-----BEGIN PRIVATE KEY-----') || decoded.startsWith('{')) {
+        return sanitizePrivateKey(decoded);
+      }
+    } catch {}
+  }
+
+  return key;
+}
+
+/**
+ * Resolves Service Account credentials across multiple supported environment formats:
+ * 1. GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 (Entire JSON encoded in Base64)
+ * 2. Full Service Account JSON pasted in GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+ * 3. Separate GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+ */
+export function resolveServiceAccountCredentials(): { clientEmail: string; privateKey: string } {
+  // 1. Base64 encoded full JSON
   if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) {
     try {
-      const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64, 'base64').toString('utf-8');
+      let b64 = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64.trim();
+      if ((b64.startsWith('"') && b64.endsWith('"')) || (b64.startsWith("'") && b64.endsWith("'"))) {
+        b64 = b64.slice(1, -1).trim();
+      }
+      const decoded = Buffer.from(b64, 'base64').toString('utf-8');
       const parsed = JSON.parse(decoded);
       if (parsed.client_email && parsed.private_key) {
-        const auth = new google.auth.JWT({
-          email: parsed.client_email,
-          key: parsed.private_key,
-          scopes: [
-            'https://www.googleapis.com/auth/spreadsheets',
-            'https://www.googleapis.com/auth/drive',
-          ],
-        });
-        sheetsClient = google.sheets({ version: 'v4', auth });
-        return sheetsClient;
+        return {
+          clientEmail: parsed.client_email.trim(),
+          privateKey: sanitizePrivateKey(parsed.private_key),
+        };
       }
     } catch (e) {
       console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY_BASE64:', e);
     }
   }
 
-  if (!clientEmail || !privateKey) {
+  // 2. Full JSON pasted into GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+  let rawPrivateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim() || '';
+  if (rawPrivateKey.startsWith('{') && rawPrivateKey.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(rawPrivateKey);
+      if (parsed.client_email && parsed.private_key) {
+        return {
+          clientEmail: parsed.client_email.trim(),
+          privateKey: sanitizePrivateKey(parsed.private_key),
+        };
+      }
+    } catch {}
+  }
+
+  // 3. Separate variables
+  let clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() || '';
+  if ((clientEmail.startsWith('"') && clientEmail.endsWith('"')) || (clientEmail.startsWith("'") && clientEmail.endsWith("'"))) {
+    clientEmail = clientEmail.slice(1, -1).trim();
+  }
+
+  const cleanKey = sanitizePrivateKey(rawPrivateKey);
+
+  if (!clientEmail || !cleanKey) {
     throw new Error(
-      'Google Service Account credentials missing. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY in environment variables.'
+      'Google Service Account credentials missing or invalid. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY (or GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) in environment variables.'
     );
   }
 
-  privateKey = privateKey.replace(/\\n/g, '\n');
+  return {
+    clientEmail,
+    privateKey: cleanKey,
+  };
+}
+
+export function getGoogleSheetsClient(): sheets_v4.Sheets {
+  if (sheetsClient) {
+    return sheetsClient;
+  }
+
+  const creds = resolveServiceAccountCredentials();
 
   const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
+    email: creds.clientEmail,
+    key: creds.privateKey,
     scopes: [
       'https://www.googleapis.com/auth/spreadsheets',
       'https://www.googleapis.com/auth/drive',
@@ -53,6 +132,7 @@ export function getGoogleSheetsClient(): sheets_v4.Sheets {
   sheetsClient = google.sheets({ version: 'v4', auth });
   return sheetsClient;
 }
+
 
 export function getMasterSpreadsheetId(): string {
   const id = process.env.MASTER_SPREADSHEET_ID;

@@ -107,13 +107,15 @@ Provide a reliable, responsive, and secure system where:
 - TypeScript Compilation: `PASS (0 errors)` (`npm run lint`)
 - Zero-Leak Tripwire Tests: `PASS (5/5 tests)` (`npm run test:dev-login`)
 - Local Preview Server: `PASS` (HTTP 200 OK on `http://localhost:4173/`)
-- Audit Trail: `PASS` (`report.md` Section 16)
+- Audit Trail: `PASS` (`report.md` Section 17)
+- Private Key Sanitizer: `PASS` (`scripts/test-phase21.ts` 7/7 edge cases passed)
 
 ## Completed
 - **Phase 20:** Vercel Serverless Function Crash Fix (`FUNCTION_INVOCATION_FAILED`), Standalone Single Production Bundle via `esbuild` (`api/index.js`), Hardened Router Exception Trapping, and Client Non-JSON Error Surfacing.
+- **Phase 21:** Bulletproof Private Key Sanitizer (`sanitizePrivateKey`) and Unified Multi-Format Credentials Resolver (`resolveServiceAccountCredentials`).
 
 ## Open Issues
-- None. All 5 test suites pass with 100% green checkmarks. Ready for deployment.
+- None. Ready to push Phase 21 fix to remote repository upon user confirmation.
 
 ## Next Direction
-- Request user permission to commit and push the serverless bundle fix (`fix: standalone serverless bundle`) to remote `origin/main`.
+- Request user permission to push commit `fix: robust private key sanitizer and multi-format credential resolver` to `origin/main`.

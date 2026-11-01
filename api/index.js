@@ -7,39 +7,90 @@ import * as jose from "jose";
 // server/_lib/sheets.ts
 import { google } from "googleapis";
 var sheetsClient = null;
-function getGoogleSheetsClient() {
-  if (sheetsClient) {
-    return sheetsClient;
+function sanitizePrivateKey(rawKey) {
+  if (!rawKey)
+    return "";
+  let key = rawKey.trim();
+  if (key.startsWith("{") && key.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(key);
+      if (parsed.private_key) {
+        key = parsed.private_key;
+      }
+    } catch {
+    }
   }
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
+  if (key.startsWith('"') && key.endsWith('"') || key.startsWith("'") && key.endsWith("'")) {
+    key = key.slice(1, -1).trim();
+  }
+  key = key.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
+  if (key.startsWith('"') && key.endsWith('"') || key.startsWith("'") && key.endsWith("'")) {
+    key = key.slice(1, -1).trim();
+  }
+  if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
+    try {
+      const decoded = Buffer.from(key, "base64").toString("utf8");
+      if (decoded.includes("-----BEGIN PRIVATE KEY-----") || decoded.startsWith("{")) {
+        return sanitizePrivateKey(decoded);
+      }
+    } catch {
+    }
+  }
+  return key;
+}
+function resolveServiceAccountCredentials() {
   if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) {
     try {
-      const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64, "base64").toString("utf-8");
+      let b64 = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64.trim();
+      if (b64.startsWith('"') && b64.endsWith('"') || b64.startsWith("'") && b64.endsWith("'")) {
+        b64 = b64.slice(1, -1).trim();
+      }
+      const decoded = Buffer.from(b64, "base64").toString("utf-8");
       const parsed = JSON.parse(decoded);
       if (parsed.client_email && parsed.private_key) {
-        const auth2 = new google.auth.JWT({
-          email: parsed.client_email,
-          key: parsed.private_key,
-          scopes: [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-          ]
-        });
-        sheetsClient = google.sheets({ version: "v4", auth: auth2 });
-        return sheetsClient;
+        return {
+          clientEmail: parsed.client_email.trim(),
+          privateKey: sanitizePrivateKey(parsed.private_key)
+        };
       }
     } catch (e) {
       console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY_BASE64:", e);
     }
   }
-  if (!clientEmail || !privateKey) {
-    throw new Error("Google Service Account credentials missing. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY in environment variables.");
+  let rawPrivateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.trim() || "";
+  if (rawPrivateKey.startsWith("{") && rawPrivateKey.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(rawPrivateKey);
+      if (parsed.client_email && parsed.private_key) {
+        return {
+          clientEmail: parsed.client_email.trim(),
+          privateKey: sanitizePrivateKey(parsed.private_key)
+        };
+      }
+    } catch {
+    }
   }
-  privateKey = privateKey.replace(/\\n/g, "\n");
+  let clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() || "";
+  if (clientEmail.startsWith('"') && clientEmail.endsWith('"') || clientEmail.startsWith("'") && clientEmail.endsWith("'")) {
+    clientEmail = clientEmail.slice(1, -1).trim();
+  }
+  const cleanKey = sanitizePrivateKey(rawPrivateKey);
+  if (!clientEmail || !cleanKey) {
+    throw new Error("Google Service Account credentials missing or invalid. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY (or GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) in environment variables.");
+  }
+  return {
+    clientEmail,
+    privateKey: cleanKey
+  };
+}
+function getGoogleSheetsClient() {
+  if (sheetsClient) {
+    return sheetsClient;
+  }
+  const creds = resolveServiceAccountCredentials();
   const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
+    email: creds.clientEmail,
+    key: creds.privateKey,
     scopes: [
       "https://www.googleapis.com/auth/spreadsheets",
       "https://www.googleapis.com/auth/drive"
@@ -929,10 +980,14 @@ async function handler(req, res) {
     });
   } catch (err) {
     console.error("Authentication error:", err.message);
+    let errorMsg = err.message || "Authentication failed.";
+    if (errorMsg.includes("DECODER routines::unsupported")) {
+      errorMsg = "Google Service Account Private Key format error: Ensure GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY or GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 is set in Vercel without surrounding quotes.";
+    }
     const status = err.message?.includes("Access Denied") ? 403 : 401;
     return res.status(status).json({
       success: false,
-      error: err.message || "Authentication failed."
+      error: errorMsg
     });
   }
 }
@@ -1228,35 +1283,10 @@ function getGoogleDriveClient() {
   if (driveClient) {
     return driveClient;
   }
-  const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  let privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
-  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) {
-    try {
-      const decoded = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64, "base64").toString("utf-8");
-      const parsed = JSON.parse(decoded);
-      if (parsed.client_email && parsed.private_key) {
-        const auth2 = new google2.auth.JWT({
-          email: parsed.client_email,
-          key: parsed.private_key,
-          scopes: [
-            "https://www.googleapis.com/auth/drive",
-            "https://www.googleapis.com/auth/spreadsheets"
-          ]
-        });
-        driveClient = google2.drive({ version: "v3", auth: auth2 });
-        return driveClient;
-      }
-    } catch (e) {
-      console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY_BASE64 in drive client:", e);
-    }
-  }
-  if (!clientEmail || !privateKey) {
-    throw new Error("Google Service Account credentials missing for Drive API. Set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY.");
-  }
-  privateKey = privateKey.replace(/\\n/g, "\n");
+  const creds = resolveServiceAccountCredentials();
   const auth = new google2.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
+    email: creds.clientEmail,
+    key: creds.privateKey,
     scopes: [
       "https://www.googleapis.com/auth/drive",
       "https://www.googleapis.com/auth/spreadsheets"
