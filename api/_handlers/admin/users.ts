@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession, enforceAdmin } from '../_lib/auth';
-import { validateCsrfToken } from '../_lib/csrf';
-import { parseJsonBody, validateUserInput } from '../_lib/validation';
-import { fetchUsersList, upsertUser, deleteUser, appendGlobalActivityLog } from '../_lib/sheets';
-import type { UserProfile } from '../../src/types';
+import { authenticateSession, enforceAdmin } from '../../_lib/auth';
+import { validateCsrfToken } from '../../_lib/csrf';
+import { parseJsonBody, validateUserInput } from '../../_lib/validation';
+import { fetchUsersList, upsertUser, deleteUser, appendGlobalActivityLog } from '../../_lib/sheets';
+import { getDriveFolderId, shareDriveFolderWithUser, removeDriveFolderUser } from '../../_lib/drive';
+import type { UserProfile } from '../../../src/types';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = req.method?.toUpperCase();
@@ -44,6 +45,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       await deleteUser(targetEmail);
+
+      // Auto-revoke Google Drive folder access if Drive integration is configured
+      const driveFolderId = getDriveFolderId();
+      if (driveFolderId) {
+        try {
+          await removeDriveFolderUser(driveFolderId, targetEmail);
+        } catch (driveErr: any) {
+          console.warn(`Drive folder revocation warning for ${targetEmail}:`, driveErr.message);
+        }
+      }
 
       await appendGlobalActivityLog({
         id: `act-usr-del-${Date.now()}`,
@@ -86,6 +97,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     await upsertUser(userProfile);
+
+    // Auto-sync Google Drive folder permissions with user's role
+    const driveFolderId = getDriveFolderId();
+    if (driveFolderId) {
+      try {
+        if (userProfile.active) {
+          const driveRole = (userProfile.role === 'admin' || userProfile.role === 'team_head') ? 'writer' : 'reader';
+          await shareDriveFolderWithUser(driveFolderId, userProfile.email, driveRole);
+        } else {
+          await removeDriveFolderUser(driveFolderId, userProfile.email);
+        }
+      } catch (driveErr: any) {
+        console.warn(`Drive folder permission sync warning for ${userProfile.email}:`, driveErr.message);
+      }
+    }
 
     await appendGlobalActivityLog({
       id: `act-usr-${Date.now()}`,

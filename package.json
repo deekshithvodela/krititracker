@@ -12,7 +12,8 @@
     "verify-connection": "tsx scripts/verify-connection.ts",
     "test:dev-login": "tsx scripts/test-dev-login.ts",
     "generate-icons": "tsx scripts/generate-pwa-icons.ts",
-    "generate-og": "tsx scripts/generate-og-images.ts"
+    "generate-og": "tsx scripts/generate-og-images.ts",
+    "test:phase15": "tsx scripts/test-phase15.ts"
   },
   "dependencies": {
     "@react-oauth/google": "^0.12.1",

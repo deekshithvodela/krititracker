@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession, enforceAdmin } from '../_lib/auth';
-import { validateCsrfToken } from '../_lib/csrf';
-import { parseJsonBody, validateTaskInput } from '../_lib/validation';
-import { fetchTeamTasks, appendTaskRow } from '../_lib/sheets';
-import { syncTeamProgress, logActivity } from '../_lib/sync';
-import type { Task } from '../../src/types';
+import { authenticateSession, enforceAdmin } from '../../_lib/auth';
+import { validateCsrfToken } from '../../_lib/csrf';
+import { parseJsonBody, validateTaskInput } from '../../_lib/validation';
+import { fetchTeamTasks, appendTaskRow } from '../../_lib/sheets';
+import { syncTeamProgress, logActivity } from '../../_lib/sync';
+import type { Task } from '../../../src/types';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

@@ -20,7 +20,7 @@ const DEFAULT_CONFIG: AppConfig = {
     'Delegate Operations & Triage',
   ],
   appSettings: {
-    companyName: 'KRITI Medical Congress & Healthcare Summit Operations',
+    companyName: 'Kakatiya Research Initiative for Transformative Innovation',
     announcementBanner: '',
     allowTeamHeadReopen: true,
     requireRemarksOnCompletion: false,

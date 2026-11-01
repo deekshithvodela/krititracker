@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createSessionToken, createAuthCookies } from '../_lib/auth';
-import { generateCsrfToken } from '../_lib/csrf';
-import type { UserProfile, UserRole } from '../../src/types';
+import { createSessionToken, createAuthCookies } from '../../_lib/auth';
+import { generateCsrfToken } from '../../_lib/csrf';
+import type { UserProfile, UserRole } from '../../../src/types';
 
 export const DEV_PERSONAS: Record<string, UserProfile> = {
   admin: {

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyGoogleToken, resolveAuthorizedUser, createSessionToken, createAuthCookies } from '../_lib/auth';
-import { generateCsrfToken } from '../_lib/csrf';
+import { verifyGoogleToken, resolveAuthorizedUser, createSessionToken, createAuthCookies } from '../../_lib/auth';
+import { generateCsrfToken } from '../../_lib/csrf';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

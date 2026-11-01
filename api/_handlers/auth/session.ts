@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession } from '../_lib/auth';
-import { parseCookies, generateCsrfToken, CSRF_COOKIE_NAME } from '../_lib/csrf';
+import { authenticateSession } from '../../_lib/auth';
+import { parseCookies, generateCsrfToken, CSRF_COOKIE_NAME } from '../../_lib/csrf';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {

@@ -23,7 +23,7 @@ export const PrivacyPolicyPage: React.FC = () => {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 to-indigo-800 text-white font-black text-sm flex items-center justify-center">
               K
             </div>
-            <span className="font-bold text-slate-800 text-sm">KRITI MedEvent</span>
+            <span className="font-bold text-slate-800 text-sm">KRITI Tracker</span>
           </div>
         </div>
       </header>
@@ -40,7 +40,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               Privacy Policy &amp; Security Disclosure
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm">
-              Effective Date: November 2026 • Version 1.0.0 • Governing KRITI MedEvent Tracker
+              Effective Date: November 2026 • Version 1.0.0 • Governing KRITI Tracker (Kakatiya Research Initiative for Transformative Innovation)
             </p>
           </div>
 
@@ -81,7 +81,7 @@ export const PrivacyPolicyPage: React.FC = () => {
                 1. Google OAuth 2.0 Scope Boundaries
               </h2>
               <p>
-                KRITI MedEvent Tracker uses Google Identity Services exclusively to authenticate users via federated Single Sign-On (SSO). The application explicitly limits its authentication scope to:
+                KRITI Tracker uses Google Identity Services exclusively to authenticate users via federated Single Sign-On (SSO). The application explicitly limits its authentication scope to:
               </p>
               <ul className="list-disc list-inside space-y-1 pl-2 text-slate-600">
                 <li><code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-xs text-slate-800">openid</code> (OpenID Connect token verification)</li>

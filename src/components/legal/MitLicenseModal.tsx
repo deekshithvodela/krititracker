@@ -37,7 +37,7 @@ export const MitLicenseModal: React.FC<MitLicenseModalProps> = ({ isOpen, onClos
                   <ExternalLink className="w-3 h-3 inline" />
                 </a>
               </p>
-              <p className="text-[11px] text-slate-500">KRITI MedEvent Tracker Contributors</p>
+              <p className="text-[11px] text-slate-500">KRITI Tracker Contributors</p>
             </div>
           </div>
 

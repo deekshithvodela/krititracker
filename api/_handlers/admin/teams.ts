@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession, enforceAdmin } from '../_lib/auth';
-import { validateCsrfToken } from '../_lib/csrf';
-import { parseJsonBody, validateTeamInput } from '../_lib/validation';
-import { fetchMasterTeamOverview, updateMasterTeamOverviewRow, appendGlobalActivityLog, ensureTeamSpreadsheetInitialized } from '../_lib/sheets';
-import type { SheetRowTeamOverview } from '../_lib/types';
+import { authenticateSession, enforceAdmin } from '../../_lib/auth';
+import { validateCsrfToken } from '../../_lib/csrf';
+import { parseJsonBody, validateTeamInput } from '../../_lib/validation';
+import { fetchMasterTeamOverview, updateMasterTeamOverviewRow, appendGlobalActivityLog, ensureTeamSpreadsheetInitialized } from '../../_lib/sheets';
+import type { SheetRowTeamOverview } from '../../_lib/types';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = req.method?.toUpperCase();

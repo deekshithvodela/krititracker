@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession, enforceAdmin } from '../_lib/auth';
-import { validateCsrfToken } from '../_lib/csrf';
-import { getTeamSpreadsheetMap, appendGlobalActivityLog } from '../_lib/sheets';
-import { reconcileAllTeams } from '../_lib/sync';
+import { authenticateSession, enforceAdmin } from '../../_lib/auth';
+import { validateCsrfToken } from '../../_lib/csrf';
+import { getTeamSpreadsheetMap, appendGlobalActivityLog } from '../../_lib/sheets';
+import { reconcileAllTeams } from '../../_lib/sync';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

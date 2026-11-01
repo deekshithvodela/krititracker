@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession, enforceAdmin } from '../_lib/auth';
-import { validateCsrfToken } from '../_lib/csrf';
-import { parseJsonBody } from '../_lib/validation';
-import { fetchAppConfig, saveAppConfig, appendGlobalActivityLog } from '../_lib/sheets';
-import type { AppConfig } from '../../src/types';
+import { authenticateSession, enforceAdmin } from '../../_lib/auth';
+import { validateCsrfToken } from '../../_lib/csrf';
+import { parseJsonBody } from '../../_lib/validation';
+import { fetchAppConfig, saveAppConfig, appendGlobalActivityLog } from '../../_lib/sheets';
+import type { AppConfig } from '../../../src/types';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const method = req.method?.toUpperCase();

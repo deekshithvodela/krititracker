@@ -20,7 +20,10 @@ export function getGoogleSheetsClient(): sheets_v4.Sheets {
         const auth = new google.auth.JWT({
           email: parsed.client_email,
           key: parsed.private_key,
-          scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+          scopes: [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive',
+          ],
         });
         sheetsClient = google.sheets({ version: 'v4', auth });
         return sheetsClient;
@@ -41,7 +44,10 @@ export function getGoogleSheetsClient(): sheets_v4.Sheets {
   const auth = new google.auth.JWT({
     email: clientEmail,
     key: privateKey,
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    scopes: [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/drive',
+    ],
   });
 
   sheetsClient = google.sheets({ version: 'v4', auth });

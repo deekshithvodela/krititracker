@@ -60,9 +60,11 @@ export const TeamDashboard: React.FC = () => {
   const canEditStatus = !isViewer && (isAdmin || assignedTeamId === targetTeamId);
   const canManageTasks = !isViewer && (isAdmin || assignedTeamId === targetTeamId);
 
-  const loadTeamData = useCallback(async () => {
+  const loadTeamData = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+      }
       setError(null);
       const [overviewData, tasksData] = await Promise.all([
         api.getTeamOverview(targetTeamId).catch(() => null),
@@ -76,7 +78,9 @@ export const TeamDashboard: React.FC = () => {
       console.error('Error fetching team checklist:', err);
       setError(err.message || 'Failed to fetch team data.');
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, [targetTeamId]);
 
@@ -109,7 +113,7 @@ export const TeamDashboard: React.FC = () => {
       const response = await api.updateTaskStatus(targetTeamId, taskId, newStatus);
       // Update with server confirmed data
       setMetrics(response.metrics);
-      loadTeamData(); // Refresh to catch fresh activity and latest pending task
+      loadTeamData(true); // Silent refresh in background without flickering UI
     } catch (err: any) {
       // Rollback on failure
       setTasks(previousTasks);
@@ -242,46 +246,34 @@ export const TeamDashboard: React.FC = () => {
           </button>
         )}
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-primary-100 text-primary-800 uppercase">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="w-full sm:max-w-2xl">
+            {/* Eyebrow Committee Badge */}
+            <div className="inline-flex items-center gap-1.5 mb-1.5">
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 border border-primary-200/60 uppercase tracking-wide">
                 {targetTeamId}
               </span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                {teamMeta?.name || `Team ${targetTeamId.replace('team-', '')}`}
-              </h1>
             </div>
+            {/* Full-Width Unwrapped Title */}
+            <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug">
+              {teamMeta?.name || `Team ${targetTeamId.replace('team-', '')}`}
+            </h1>
             {teamMeta?.description && (
-              <p className="text-sm text-slate-500 mt-1">{teamMeta.description}</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed">{teamMeta.description}</p>
             )}
           </div>
 
-          <div className="flex items-center gap-2.5">
+          {/* Action Toolbar: Single Refresh button on top; Add Task stays in Deliverables section */}
+          <div className="flex items-center gap-2 self-start sm:self-center">
             <Button
               variant="outline"
               size="sm"
-              onClick={loadTeamData}
-              className="flex items-center gap-1.5"
+              onClick={() => loadTeamData()}
+              className="flex items-center gap-1.5 text-xs"
             >
               <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
               <span>Refresh</span>
             </Button>
-
-            {canManageTasks && (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setSelectedTaskForEdit(null);
-                  setTaskFormOpen(true);
-                }}
-                className="flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Task</span>
-              </Button>
-            )}
           </div>
         </div>
       </div>
@@ -292,66 +284,73 @@ export const TeamDashboard: React.FC = () => {
             <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
             <span>{error}</span>
           </div>
-          <Button size="sm" variant="outline" onClick={loadTeamData}>
+          <Button size="sm" variant="outline" onClick={() => loadTeamData()}>
             Retry
           </Button>
         </div>
       )}
 
-      {/* Progress Bar Summary Card */}
-      {metrics && (
-        <Card className="p-5 bg-white border border-slate-200">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Team Completion Rate
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-slate-900 font-mono">
-                  {metrics.completionPercentage}%
+      {/* Top Summary Section: Fixed Layout & Anchor Stabilization to Prevent Viewport Jumps */}
+      <div className="space-y-6" style={{ overflowAnchor: 'none' }}>
+        {/* Team Progress Bar Card (Deduplicated when tasks reach 100% completion) */}
+        {metrics && metrics.completionPercentage < 100 && (
+          <Card className="p-4 sm:p-5 bg-white border border-slate-200 shadow-xs">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Team Completion Rate
                 </span>
-                <span className="text-xs text-slate-500 font-medium">
-                  ({metrics.completedTasks} of {metrics.totalTasks} items completed)
-                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-mono">
+                    {metrics.completionPercentage}%
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium">
+                    ({metrics.completedTasks} of {metrics.totalTasks} items completed)
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-4 text-xs font-medium w-full sm:w-auto justify-between sm:justify-start">
+                <div className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>{metrics.completedTasks} Completed</span>
+                </div>
+                <div className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border ${
+                  metrics.pendingTasks === 0
+                    ? 'text-slate-500 bg-slate-50 border-slate-200'
+                    : 'text-amber-700 bg-amber-50 border-amber-100'
+                }`}>
+                  <Clock className="w-4 h-4" />
+                  <span>{metrics.pendingTasks} Pending</span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 text-xs font-medium">
-              <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>{metrics.completedTasks} Completed</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100">
-                <Clock className="w-4 h-4 text-amber-600" />
-                <span>{metrics.pendingTasks} Pending</span>
-              </div>
+            <div className="mt-3.5 w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${getProgressBarColor(
+                  metrics.completionPercentage
+                )}`}
+                style={{ width: `${metrics.completionPercentage}%` }}
+              />
             </div>
-          </div>
+          </Card>
+        )}
 
-          <div className="mt-4 w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${getProgressBarColor(
-                metrics.completionPercentage
-              )}`}
-              style={{ width: `${metrics.completionPercentage}%` }}
-            />
-          </div>
-        </Card>
-      )}
-
-      {/* 🎯 Prominent Latest Pending Task Hero Card */}
-      <LatestPendingHero
-        latestPendingTask={metrics?.latestPendingTask || 'No tasks assigned yet.'}
-        taskDetails={latestPendingTaskObj}
-        onComplete={canEditStatus ? id => handleToggleStatus(id, 'Completed') : undefined}
-        isUpdating={isUpdatingStatus}
-      />
+        {/* 🎯 Prominent Latest Pending Task Hero Card (Compact on mobile, Spacious on desktop) */}
+        <LatestPendingHero
+          latestPendingTask={metrics?.latestPendingTask || 'No tasks assigned yet.'}
+          taskDetails={latestPendingTaskObj}
+          onComplete={canEditStatus ? id => handleToggleStatus(id, 'Completed') : undefined}
+          isUpdating={isUpdatingStatus}
+        />
+      </div>
 
       {/* Checklist Section */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold text-slate-900">Task Deliverables</h2>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">Task Deliverables</h2>
             <Badge variant="outline" className="font-mono text-xs">
               {filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'}
             </Badge>
@@ -384,18 +383,18 @@ export const TeamDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-b border-slate-200 pb-3">
-          <div className="flex items-center gap-1 text-xs text-slate-400 font-semibold mr-2 uppercase">
+        {/* Filter Pills Bar (Smooth Horizontal Scroll on Mobile, No Broken Wrapping) */}
+        <div className="flex items-center gap-2 pt-1 border-b border-slate-200 pb-3 overflow-x-auto scrollbar-none flex-nowrap -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-1 text-xs text-slate-400 font-semibold mr-1 uppercase flex-shrink-0">
             <Filter className="w-3.5 h-3.5" />
-            <span>Filter:</span>
+            <span className="hidden sm:inline">Filter:</span>
           </div>
 
           <button
             onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
               statusFilter === 'all'
-                ? 'bg-slate-900 text-white'
+                ? 'bg-slate-900 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
@@ -403,9 +402,9 @@ export const TeamDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setStatusFilter('pending')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
               statusFilter === 'pending'
-                ? 'bg-amber-600 text-white'
+                ? 'bg-amber-600 text-white shadow-xs'
                 : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
             }`}
           >
@@ -413,9 +412,9 @@ export const TeamDashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setStatusFilter('completed')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
               statusFilter === 'completed'
-                ? 'bg-emerald-600 text-white'
+                ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
             }`}
           >
@@ -427,7 +426,7 @@ export const TeamDashboard: React.FC = () => {
             <select
               value={categoryFilter}
               onChange={e => setCategoryFilter(e.target.value)}
-              className="ml-auto text-xs py-1 px-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="text-xs py-1 px-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 flex-shrink-0 sm:ml-auto"
             >
               <option value="all">All Categories</option>
               {availableCategories.map(cat => (

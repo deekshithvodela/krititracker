@@ -5,6 +5,7 @@
 - **Purpose:** Production-ready full-stack web application tracking progress across 12 medical congress committees and clinical teams (dynamically extensible to any number of committees and sheets), with isolated committee checklists, prominent latest-pending-task workflow, administrative monitoring dashboard, dynamic Admin Control Centre, mandatory email whitelisting, interactive MIT License Modal, PWA offline support, and Google Sheets as the primary database.
 - **Current Phase:** Phase 14 - Production Quality Audit, 7-Vector Privacy Leak Check, OWASP Security Baseline, Brand Logo SVG Redesign, Multi-Platform OpenGraph Suite & Deployment Guide Verification (Completed)
 - **Repository Location:** `/home/drover/Projects/KRITI tracker`
+- **Remote Repository:** [https://github.com/deekshithvodela/kriti-tracker.git](https://github.com/deekshithvodela/kriti-tracker.git)
 - **Technology Stack:**
   - **Frontend:** React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui, Lucide React, React Router 6, PWA Service Worker & Manifest
   - **Backend:** Vercel Serverless Functions (`api/` directory), TypeScript, `googleapis`, `google-auth-library`, `jose` (secure JWT session cookies)
@@ -82,20 +83,31 @@ Provide a reliable, responsive, and secure system where:
 - [x] Phase 11: Universal Task Expand Button & Rich Deliverable Details Drawer implemented, tested, and verified.
 - [x] Phase 12: Whitelist Login Access Notice, Deekshith Vodela Copyright & LinkedIn Link, Interactive MIT License Modal & Medical Event Transformation implemented, tested, and verified.
 - [x] Phase 14: Comprehensive Production Quality Audit, 7-Vector Privacy Leak Check, OWASP Security Baseline, Brand Logo SVG Redesign, Multi-Platform OpenGraph Suite & Deployment Guide Verification implemented, tested, and verified.
+- [x] Phase 15: Footer Isolation to Login Page, Zero-CLS Two-Tier Navigation (Canonify Arrangement), Mobile Viewport UI/UX Polish, ServiceWorker Syntax Fix & Git Repository Documentation Overhaul implemented, tested, and verified.
+- [x] Phase 16: Mobile UI/UX Industry Standard Overhaul — Zero Layout Shift, Natural Word-Wrapping, and Decluttered Arrangement implemented, tested, and verified.
+- [x] Phase 17: Branding Refinement & Mobile Hamburger Menu Decluttering (Removed MedEvent, updated to Kakatiya Research Initiative for Transformative Innovation, removed legal modals from mobile drawer) implemented, tested, and verified.
+
+- [x] Phase 18: Vercel Serverless Function Consolidation to 1 Lambda (Resolved Hobby Plan 12-function limit, consolidated 18 endpoints into `api/_handlers/` dispatched by `api/index.ts`, updated `vercel.json` rewrite, all tests pass).
+- [x] Phase 19: Mobile Layout Shift Elimination (compact fixed-height Hero card ~135px, 60% footprint reduction, 0px scroll jump) & Google Drive Folder Integration (auto-share Drive folder on whitelist, 1-step permissions, auto-discovery).
 
 ## In Progress
-- None (All planned phases completed).
+- Completed Phase 19. Ready for review and deployment.
 
 ## Verification Status
-- Production Build: `PASS`
-- TypeScript Compilation: `PASS (0 errors)`
-- Zero-Leak Tripwire Tests: `PASS (5/5 tests)`
-- 7-Vector Privacy Leak Scan: `PASS (0 leaks)`
-- PWA Manifest & Icons: `PASS`
-- OpenGraph Suite: `PASS (All images < 100 KB)`
-- Service Worker: `PASS`
-- Local Port 4173 Server: `RUNNING (HTTP 200 OK)`
-- Audit: `PASS` (`report.md` Section 10)
+- Mobile Hero Footprint: `PASS` (135.5px fixed height on mobile, 60% reduction from 335px)
+- Mobile Scroll Stability: `PASS` (Delta: 0px on uncheck and check; zero layout shift)
+- Phase 19 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase19.ts`)
+- Vercel Discovered Functions: `PASS` (Exactly 1 function: `api/index.ts`, 1/12 Hobby quota used)
+- Phase 18 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase18.ts`)
+- Production Build: `PASS` (`dist/assets/index-BqFdHh1i.js` built in 3.03s)
+- TypeScript Compilation: `PASS (0 errors)` (`npm run lint`)
+- Zero-Leak Tripwire Tests: `PASS (5/5 tests)` (`npm run test:dev-login`)
+- Phase 17 Verification Suite: `PASS (7/7 tests)` (`npx tsx scripts/test-phase17.ts`)
+- Phase 16 Verification Suite: `PASS (8/8 tests)` (`npx tsx scripts/test-phase16.ts`)
+- Phase 15 Verification Suite: `PASS (5/5 tests)` (`npx tsx scripts/test-phase15.ts`)
+- Google Drive Permission Sync: `PASS` (`api/_lib/drive.ts` and `api/_handlers/admin/users.ts`)
+- Local Preview Server: `PASS` (HTTP 200 OK on `http://localhost:4173/`)
+- Audit Trail: `PASS` (`report.md` Section 15)
 
 
 

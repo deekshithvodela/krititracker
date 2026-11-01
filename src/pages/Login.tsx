@@ -56,10 +56,10 @@ export const Login: React.FC = () => {
             K
           </div>
           <h1 className="mt-4 text-3xl font-extrabold text-slate-900 tracking-tight">
-            KRITI MedEvent Tracker
+            KRITI Tracker
           </h1>
           <p className="mt-1 text-sm text-slate-500 font-medium">
-            Medical Congress & Healthcare Event Operations System
+            Kakatiya Research Initiative for Transformative Innovation
           </p>
         </div>
 

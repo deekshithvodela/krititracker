@@ -1,9 +1,38 @@
-# KRITI MedEvent Tracker: Centralised Medical Congress & Healthcare Event Management System
+# KRITI Tracker: Kakatiya Research Initiative for Transformative Innovation
 
-A production-ready, full-stack responsive web application tracking progress across 12 clinical congress committees and teams (dynamically extensible beyond 12), with isolated medical committee checklists, prominent latest-pending-task workflow, executive administrative monitoring dashboard, Dynamic Admin Control Centre, mandatory email whitelisting, interactive MIT License Modal, and Google Sheets as the primary database.
+<div align="center">
 
-> [!IMPORTANT]
-> **Production Deployment Guide:** For an end-to-end cloud setup guide (Google Cloud Console, Service Account JSON key, OAuth Client ID, Vercel deployment, and automated blank sheet auto-provisioning), see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18.3-61dafb?logo=react)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38bdf8?logo=tailwindcss)](https://tailwindcss.com/)
+[![Google Sheets API](https://img.shields.io/badge/Google%20Sheets%20API-v4-34A853?logo=googlesheets)](https://developers.google.com/sheets/api)
+[![PWA Offline](https://img.shields.io/badge/PWA-Offline%20Ready-5A0FC8?logo=pwa)](https://web.dev/explore/progressive-web-apps)
+[![Zero CLS](https://img.shields.io/badge/CLS-0.00%20(Zero%20Shift)-emerald)](https://web.dev/cls/)
+[![WCAG 2.2 AA](https://img.shields.io/badge/WCAG%202.2-AA%20Compliant-success)](https://www.w3.org/WAI/standards-guidelines/wcag/)
+
+**A production-ready, full-stack responsive web application tracking progress across 12 clinical congress committees and teams (dynamically extensible beyond 12), with isolated medical committee checklists, prominent latest-pending-task workflow, executive administrative monitoring dashboard, Dynamic Admin Control Centre, mandatory email whitelisting, interactive MIT License Modal, and Google Sheets as the primary database.**
+
+[Live Deployment Guide](DEPLOYMENT_GUIDE.md) • [Architecture](#-system-architecture) • [Two-Tier Navbar](#-two-tier-navigation-bar-arrangement) • [12 Committees](#-12-medical-congress-committees) • [Quickstart](#-quickstart-in-3-minutes) • [License](#-license--attribution)
+
+</div>
+
+---
+
+## 📑 Table of Contents
+
+- [🌟 Key Highlights & Features](#-key-highlights--features)
+- [🏛️ Two-Tier Navigation Bar Arrangement (Zero CLS)](#-two-tier-navigation-bar-arrangement-zero-cls)
+- [🏥 12 Medical Congress Committees](#-12-medical-congress-committees)
+- [🏗️ System Architecture](#-system-architecture)
+- [🚀 Automated Blank Sheet Auto-Provisioning Engine](#-automated-blank-sheet-auto-provisioning-engine)
+- [📱 Mobile Viewport & PWA Optimization](#-mobile-viewport--pwa-optimization)
+- [⚡ Quickstart in 3 Minutes](#-quickstart-in-3-minutes)
+- [📁 Repository Structure](#-repository-structure)
+- [🔒 Security, Whitelisting & Privacy Governance](#-security-whitelisting--privacy-governance)
+- [🧪 Local Testing & Zero-Leak Sandbox](#-local-testing--zero-leak-sandbox)
+- [☁️ Production Deployment to Vercel](#️-production-deployment-to-vercel)
+- [📄 License & Attribution](#-license--attribution)
 
 ---
 
@@ -11,34 +40,73 @@ A production-ready, full-stack responsive web application tracking progress acro
 
 1. **13+ Independent Google Sheets Database:**
    - **1 Master Spreadsheet:** Contains `Team_Overview`, `Users` (Authorised User Whitelist), `Global_Activity`, and `Configuration` (Dynamic Settings).
-   - **12+ Individual Committee Spreadsheets:** Each contains a dedicated `Tasks` sheet (with clinical priority, deadline, status, category, and mandatory flag) and an `Activity_Log` audit sheet.
-   - Zero reliance on `IMPORTRANGE` — synchronisation is performed atomically by the backend via Google Sheets API v4.
-2. **Mandatory Email Whitelisting:**
-   - Google Sign-In is required, but successful Google authentication alone **never** grants access.
-   - Tokens are validated server-side (signature, audience, issuer, expiration, and `email_verified === true`).
-   - Only pre-authorized emails in the Master `Users` spreadsheet can obtain an authenticated session.
-   - Revalidated on **every authenticated backend request** — deactivated or revoked accounts lose access immediately.
-   - Dedicated Access Denied screen for unwhitelisted accounts with zero public self-registration.
-3. **Executive Admin Dashboard:**
-   - Centralised visibility across all 12 medical event committees.
-   - Real-time progress bars, completed vs. pending tasks, latest pending item, and overdue indicators.
-   - Quick filters (All, In Progress, Completed, Not Started, Overdue) and instant search.
-   - Global Activity audit trail and Google Sheets connection health check with 1-click **Force Reconcile**.
-4. **Individual Medical Committee Dashboards:**
-   - High-impact **Latest Pending Task Hero Card** prioritising what to execute next with 1-click completion.
-   - Interactive checklist ordered by display order with touch-friendly controls (>= 44px).
-   - Priority badges (Critical, High, Medium, Low), category tags, overdue warnings, and remarks popover.
-   - Optimistic UI updates with rollback on network failure.
-5. **Dynamic Admin Control Centre:**
-   - **Team Management:** Create, rename, activate, deactivate, archive, and assign team heads beyond the initial 12 teams without modifying source code.
-   - **Checklist Categories:** Manage task categories and sections.
-   - **Dashboard Customisation:** Toggle visibility of KPI metrics, team overview table, activity stream, and sync health widgets.
-   - **Application Governance:** Configure company branding, announcement broadcasts, and task reopen policies.
-6. **Strict Role-Based Access Control (RBAC):**
-   - **Super Admin:** Access to all teams, task creation/editing/deletion, drag-and-drop reordering, user whitelist management, control centre, and reconciliation.
-   - **Team Head:** Strictly restricted to their assigned team. Cross-team requests are blocked with 403 Forbidden.
-   - **Viewer:** Read-only access to their assigned team.
-   - Secure HTTP-only, SameSite=Lax, Secure signed JWT session cookies and CSRF double-submit protection.
+   - **12+ Individual Committee Spreadsheets:** Each contains a dedicated `Tasks` sheet (clinical priority, deadline, status, category, mandatory flag) and an `Activity_Log` audit sheet.
+   - Zero reliance on `IMPORTRANGE` — synchronization is performed atomically by the backend via Google Sheets API v4 with optimistic client updates.
+2. **Automated Blank Sheet Auto-Provisioning:**
+   - Add any freshly created blank Google Spreadsheet via the Admin Control Centre. The system automatically inspects sheet metadata, creates missing `Tasks` and `Activity_Log` tabs, and seeds 14-column task schemas and 5-column audit headers on the fly.
+3. **Mandatory Institutional Email Whitelisting:**
+   - Google Sign-In is required, but Google authentication alone **never** grants access.
+   - Tokens are validated server-side (`email_verified === true`, aud, iss, exp).
+   - Only pre-authorized institutional emails in the Master `Users` spreadsheet obtain an active session.
+   - Revalidated on **every authenticated backend request** — revoked emails lose access immediately.
+4. **Zero-CLS Two-Tier Navigation Architecture:**
+   - Inspired by the clean arrangement of [Canonify](https://deekshithvodela.github.io/canonify/), the header is organized into two pre-allocated tiers:
+     - **Tier 1 (Utility & Status Bar, 32px fixed):** Dynamic clinical announcement ticker or live synchronization status, plus compact QA Persona Switcher. Pre-allocated height guarantees 0 Cumulative Layout Shift.
+     - **Tier 2 (Main Brand & Navigation Bar, 56px fixed):** Brand monogram squircle ('K'), navigation links, user profile dropdown, and mobile drawer toggle.
+5. **Mobile-First Responsive Experience:**
+   - Screen real estate maximized on mobile by isolating the global footer strictly to `/login`.
+   - Deliverable checklist cards feature structured row hierarchies (title, priority badge, metadata) and >= 44x44px touch targets.
+   - Smooth horizontal swipe filters and slide-down mobile navigation drawer with legal compliance modals.
+6. **Executive Admin Dashboard & Control Centre:**
+   - Centralized visibility across all 12 medical event committees with real-time completion progress bars, overdue warnings, and 1-click **Force Reconcile**.
+   - Dynamic team creation, renaming, category customization, widget toggling, and branding governance without touching source code.
+7. **Strict Role-Based Access Control (RBAC):**
+   - **Super Admin (Congress Director):** Global access, task CRUD, reordering, whitelist administration, reconciliation.
+   - **Team Head (Committee Chair):** Isolated strictly to their assigned committee. Cross-team requests are blocked with 403 Forbidden.
+   - **Viewer (Ethics Auditor):** Read-only visibility for compliance auditing.
+
+---
+
+## 🏛️ Two-Tier Navigation Bar Arrangement (Zero CLS)
+
+To eliminate Cumulative Layout Shift (CLS) caused by dynamic asynchronous announcements and to keep small mobile viewports completely uncluttered, KRITI MedEvent Tracker implements a strict two-tier navigation structure:
+
+```
++-----------------------------------------------------------------------------------------+
+| TIER 1: UTILITY & STATUS BAR (Fixed h-8 / 32px height • Dark Navy #0f172a • Zero CLS)   |
+| [● LIVE] 🩺 Medical Congress Active • Live Multi-Committee Sync        [🧪 QA: Director ▾]|
++-----------------------------------------------------------------------------------------+
+| TIER 2: MAIN BRAND & NAVIGATION BAR (Fixed h-14 / 56px height • White Backdrop-Blur)     |
+| [K] KRITI            |  Overview  •  Control Centre  •  Users      [Avatar (D) ▾]  [☰]  |
++-----------------------------------------------------------------------------------------+
+```
+
+### Why This Architecture Wins
+- **Zero Layout Shift (CLS = 0.00):** In traditional single-row headers, an asynchronous announcement banner pops in above the navigation bar after loading, jarringly shifting page content downward by 32px. In our two-tier arrangement, Tier 1 is **pre-allocated in the DOM with a fixed 32px height**. Whether showing the live clinical status ticker or an admin broadcast, height never changes.
+- **Mobile Viewport Optimization:** Moving status indicators and QA developer tools into Tier 1 frees up 100% of horizontal space in Tier 2. On a 375px mobile screen, Tier 2 holds only the Brand Monogram on the left and User Avatar + Hamburger menu on the right. Zero cramping, zero clipped text!
+
+---
+
+## 🏥 12 Medical Congress Committees
+
+The system comes pre-configured with 12 authentic medical congress committees, modeled after international clinical conferences and surgical summits:
+
+| Code | Medical Committee Name | Lead Speciality | Core Operational Deliverables |
+|---|---|---|---|
+| `team-scientific` | **Team 01: Scientific Committee & Medical Abstracts** | Scientific Chair | Finalize peer-review approvals for 250 oral clinical abstracts; publish supplement to Congress Journal. |
+| `team-cme-workshops` | **Team 02: Clinical Workshops & CME Accreditation** | CME Director | Submit syllabus to State Medical Council for 12 credit hours; prepare hands-on workstations. |
+| `team-faculty` | **Team 03: Keynote Speakers & Faculty Coordination** | Faculty Coordinator | Reconcile flight itineraries and lodging for 45 international keynote professors; obtain disclosure forms. |
+| `team-surgical-labs` | **Team 04: Surgical Wet-Labs & Simulators** | Surgical Director | Calibrate Da Vinci robotic simulator and laparoscopic towers; verify cadaveric cold-chain storage. |
+| `team-exhibition` | **Team 05: Medical Exhibition & Pharma Sponsors** | Commercial Lead | Audit 60 pharma booths for medical compliance and fire safety clearances. |
+| `team-registration` | **Team 06: Delegate Registration & Health Badging** | Operations Head | Program RFID credential encoders and prepare delegate registration kits. |
+| `team-av-telemed` | **Team 07: Audio-Visual, Telemedicine & Live Surgery** | Telemedicine Lead | Establish encrypted low-latency fiber link for live operating theatre telecast to main auditorium. |
+| `team-hospitality` | **Team 08: Hospitality & VIP Medical Delegations** | Hospitality Lead | Schedule dedicated VIP escorts and dietary protocol arrangements for honorary society fellows. |
+| `team-emergency-ops` | **Team 09: Emergency Medical Protocol & First Aid** | Chief Medical Officer | Position mobile defibrillator (AED) units, emergency resuscitation kits, and standby ambulance crew. |
+| `team-medical-press` | **Team 10: Medical Press, Media & Journal Publications** | Press Secretary | Issue press embargo advisories on late-breaking phase III clinical trial results. |
+| `team-biohazard-venue`| **Team 11: Venue Facilities, Bio-Hazard & Infection** | Infection Control | Commission HEPA filtration air scrubbers and biomedical waste disposal certification. |
+| `team-ethics-compliance`| **Team 12: Compliance, Ethics Board & Regulatory** | Ethics Officer | Verify clinical trial registry disclosures and ethical declarations for presented human research. |
+
+*(The system is dynamically extensible to any number of additional committees via the Admin Control Centre without touching code.)*
 
 ---
 
@@ -46,20 +114,22 @@ A production-ready, full-stack responsive web application tracking progress acro
 
 ```mermaid
 graph TD
-    Client["Client Browser (React SPA + Vite + Tailwind + shadcn/ui)"]
-    subgraph VercelServerless["Vercel Serverless Functions (/api)"]
+    Client["Client Browser (React SPA + Vite + Tailwind + PWA)"]
+    subgraph VercelServerless["Vercel Serverless Function (Hobby Plan Optimized — 1 Function)"]
+        Router["api/index.ts (Unified Router & Dispatcher)"]
         AuthMiddleware["Auth & Whitelist Revalidation Middleware"]
-        AuthRoutes["/api/auth (Google Sign-In, Session, Logout)"]
-        TeamRoutes["/api/teams (Get Teams, Overview, Tasks)"]
-        TaskRoutes["/api/tasks (Status Toggle, CRUD, Drag-and-Drop Reorder)"]
-        AdminRoutes["/api/admin (Dashboard, Users, Activity, Sync/Reconcile)"]
-        ControlCentreRoutes["/api/admin/config & /api/admin/teams"]
+        AuthRoutes["api/_handlers/auth (Google Sign-In, Session, Logout)"]
+        TeamRoutes["api/_handlers/teams (Get Teams, Overview, Tasks)"]
+        TaskRoutes["api/_handlers/tasks (Status Toggle, CRUD, Reorder)"]
+        AdminRoutes["api/_handlers/admin (Dashboard, Users, Activity, Sync/Reconcile)"]
+        ControlCentreRoutes["api/_handlers/admin/config & /teams"]
         SyncEngine["Synchronisation Engine (Batch & Progress Compute)"]
+        ProvisioningEngine["Automated Blank Sheet Auto-Provisioning Engine"]
     end
     subgraph GoogleSheets["Google Sheets Database (13+ Spreadsheets)"]
         MasterSheet["Master Spreadsheet\n• Team_Overview\n• Users (Authorised Whitelist)\n• Global_Activity\n• Configuration (Dynamic Settings)"]
-        TeamSheet1["Team 01 Spreadsheet\n• Tasks\n• Activity_Log"]
-        TeamSheetN["Team 02..N Spreadsheets\n• Tasks\n• Activity_Log"]
+        TeamSheet1["Team 01 Spreadsheet\n• Tasks (14 Cols)\n• Activity_Log (5 Cols)"]
+        TeamSheetN["Team 02..N Spreadsheets\n• Tasks (14 Cols)\n• Activity_Log (5 Cols)"]
     end
 
     Client -->|HTTPS + Cookies + CSRF| AuthMiddleware
@@ -71,11 +141,62 @@ graph TD
     AuthMiddleware --> ControlCentreRoutes
     TaskRoutes --> SyncEngine
     AdminRoutes --> SyncEngine
-    ControlCentreRoutes --> SyncEngine
+    ControlCentreRoutes --> ProvisioningEngine
+    ProvisioningEngine -->|Auto-Create Tabs & Headers| TeamSheetN
     SyncEngine -->|Google Sheets API v4| MasterSheet
     SyncEngine -->|Google Sheets API v4| TeamSheet1
     SyncEngine -->|Google Sheets API v4| TeamSheetN
 ```
+
+---
+
+## 🚀 Automated Blank Sheet Auto-Provisioning Engine
+
+KRITI Tracker includes an automated sheet provisioning engine in `api/_lib/sheets.ts` (`ensureTeamSpreadsheetInitialized`).
+
+### How It Works:
+1. When creating a new committee via the Admin Control Centre, you can simply create a **blank Google Spreadsheet** in Google Drive and paste its ID.
+2. The backend automatically calls `ensureTeamSpreadsheetInitialized(spreadsheetId)`:
+   - Inspects the sheet metadata via Google Sheets API v4.
+   - If the `Tasks` sheet is missing, it creates the tab and seeds 14 standard headers:
+     `Task ID | Title | Description | Priority | Assigned To | Deadline | Status | Completed At | Order | Category | Mandatory | Created At | Updated At | Remarks`
+   - If the `Activity_Log` sheet is missing, it creates the tab and seeds 5 standard audit headers:
+     `Log ID | Timestamp | User Email | Action | Details`
+3. Zero manual Google Sheets formula editing or cell formatting required. The application handles 100% of schema provisioning automatically!
+
+---
+
+## 📱 Mobile Viewport & PWA Optimization
+
+KRITI MedEvent Tracker is engineered from the ground up for high-pressure on-site clinical event operations:
+
+- **Isolated Footer Policy:** The global copyright and footer links are strictly isolated to the `/login` page. On active checklist and dashboard views, the footer is removed, providing maximum vertical screen space for viewing deliverables.
+- **Accessible Legal Modals:** Authenticated users access the interactive MIT License Modal and Privacy Policy Modal directly from the Navbar user profile menu and mobile drawer.
+- **Generous Touch Targets (WCAG 2.2 AA):** All checkbox hitboxes, remark buttons, chevrons, and mobile hamburger controls strictly meet or exceed the >= 44x44px minimum touch target size.
+- **Offline SPA Fallback:** Progressive Web App service worker (`public/sw.js`) employs a network-first strategy with offline application shell fallback and stale-while-revalidate asset caching. Live API requests bypass cache to guarantee strict real-time RBAC synchronization.
+
+---
+
+## ⚡ Quickstart in 3 Minutes
+
+### 1. Clone & Install
+```bash
+git clone https://github.com/deekshithvodela/kriti-tracker.git
+cd kriti-tracker
+npm install
+```
+
+### 2. Configure Environment
+```bash
+cp .env.example .env.local
+```
+
+### 3. Launch Development Server
+```bash
+npm run dev
+```
+
+Visit `http://localhost:5173`. In development mode, the **🧪 QA Testing Auth Bypass** panel allows instant 1-click login as Congress Director, Scientific Head, CME Workshops Director, or Ethics Auditor without requiring Google OAuth credentials!
 
 ---
 
@@ -84,288 +205,82 @@ graph TD
 ```
 KRITI tracker/
 ├── api/                          # Vercel Serverless API Functions
-│   ├── _lib/                     # Server-side shared utilities & services
+│   ├── _lib/                     # Server-side shared services & security
 │   │   ├── auth.ts               # Google auth, Whitelist revalidation, JWT cookie session & RBAC
-│   │   ├── csrf.ts               # CSRF protection (double-submit constant-time check)
-│   │   ├── sheets.ts             # Google Sheets API client, batch helpers, & data models
-│   │   ├── sync.ts               # Synchronisation engine: recalculate progress, next task & logs
-│   │   ├── validation.ts         # Server-side request schema validation
+│   │   ├── csrf.ts               # CSRF double-submit constant-time check
+│   │   ├── sheets.ts             # Google Sheets API client & blank sheet provisioning engine
+│   │   ├── sync.ts               # Atomic progress computation & reconciliation
+│   │   ├── validation.ts         # Server-side Zod request validation
 │   │   └── types.ts              # Server-side TypeScript interfaces
-│   ├── auth/
-│   │   ├── google.ts             # POST /api/auth/google
-│   │   ├── session.ts            # GET /api/auth/session
-│   │   └── logout.ts             # POST /api/auth/logout
-│   ├── teams/
-│   │   ├── index.ts              # GET /api/teams
-│   │   └── [teamId]/
-│   │       ├── index.ts          # GET /api/teams/[teamId]
-│   │       └── tasks.ts          # GET /api/teams/[teamId]/tasks
-│   ├── tasks/
-│   │   ├── index.ts              # POST /api/tasks (Admin create task)
-│   │   ├── [taskId]/
-│   │   │   ├── index.ts          # PATCH, DELETE /api/tasks/[taskId]
-│   │   │   └── status.ts         # PATCH /api/tasks/[taskId]/status (Toggle status/remarks)
-│   │   └── reorder.ts            # PATCH /api/tasks/reorder (Drag-and-drop task reordering)
-│   └── admin/
-│       ├── dashboard.ts          # GET /api/admin/dashboard
-│       ├── activity.ts           # GET /api/admin/activity
-│       ├── users.ts              # GET, POST, PATCH, DELETE /api/admin/users (Whitelist management)
-│       ├── sync-status.ts        # GET /api/admin/sync-status
-│       ├── reconcile.ts          # POST /api/admin/reconcile
-│       ├── config.ts             # GET, PATCH /api/admin/config (Dynamic dashboard & settings)
-│       └── teams.ts              # POST, PATCH /api/admin/teams (Create, rename, archive teams)
+│   ├── auth/                     # /api/auth (google, session, logout, dev-login)
+│   ├── teams/                    # /api/teams (list teams, overview, tasks)
+│   ├── tasks/                    # /api/tasks (status toggle, CRUD, drag-and-drop reorder)
+│   └── admin/                    # /api/admin (dashboard, users, sync-status, reconcile, config, teams)
 ├── scripts/                      # Setup & administration CLI utilities
 │   ├── setup-sheets.ts           # Automated 13+ sheet bootstrapper & schema validator
-│   └── verify-connection.ts      # Verifies service account credentials & sheet access
-├── src/                          # React SPA Client
-│   ├── components/               # Reusable UI components
-│   │   ├── ui/                   # Button, Card, Modal, Badge, Tabs, Input, Select, Skeleton
-│   │   ├── layout/               # Navbar, AppShell
-│   │   ├── checklist/            # ChecklistItem, LatestPendingHero, TaskFormModal, RemarksModal
+│   ├── verify-connection.ts      # Verifies service account credentials & sheet access
+│   ├── generate-og-images.ts     # Multi-aspect ratio OpenGraph card generator
+│   └── generate-pwa-icons.ts     # PWA icon generator suite
+├── src/                          # React 18 SPA Client
+│   ├── components/               # Accessible UI components (shadcn/ui style)
+│   │   ├── ui/                   # Button, Card, Modal, Badge, Input, Select, Skeleton
+│   │   ├── layout/               # Two-tier Navbar, AppShell (footer-free)
+│   │   ├── checklist/            # ChecklistItem (touch-optimized), LatestPendingHero, TaskFormModal
 │   │   ├── dashboard/            # MetricCard, TeamOverviewTable, ActivityFeed, SyncHealthCard
 │   │   ├── control-centre/       # TeamManager, CategoryManager, WidgetCustomiser, AppSettingsForm
-│   │   └── common/               # ProtectedRoute
-│   ├── pages/                    # Application Views
-│   │   ├── Login.tsx             # Google Sign-In with whitelist error feedback
-│   │   ├── AdminDashboard.tsx    # Centralised Admin Dashboard
-│   │   ├── AdminControlCentre.tsx# Dynamic Admin Control Centre
-│   │   ├── TeamDashboard.tsx     # Team Head / Assigned Team Checklist view
-│   │   ├── UserManagement.tsx    # Authorised Email Registry & Whitelist Manager
-│   │   ├── AccessDenied.tsx      # Dedicated 403 Access Denied screen for unwhitelisted emails
-│   │   └── NotFound.tsx          # 404 Not Found page
-│   ├── hooks/                    # Custom React hooks (useAuth, useConfig)
-│   ├── services/                 # Strongly typed HTTP client with credentials & CSRF
-│   ├── types/                    # Shared TypeScript types
-│   ├── utils/                    # Client-side calculations, formatting & badge helpers
-│   ├── styles/                   # Tailwind CSS tokens & custom styling
-│   ├── App.tsx                   # Main Router & Role Guards
-│   └── main.tsx                  # React Entry point
-├── public/                       # Static public assets (logos, icons)
-├── .env.example                  # Documented environment variables template
-├── package.json                  # Scripts & dependencies
-├── tsconfig.json                 # TypeScript compiler configuration
-├── vite.config.ts                # Vite build & local API proxy configuration
-├── tailwind.config.ts            # Tailwind CSS configuration
-├── vercel.json                   # Vercel deployment routes & serverless function config
-└── PROJECT_STATE.md              # Semantic project state & continuity
+│   │   └── legal/                # MitLicenseModal, PrivacyPolicyModal
+│   ├── pages/                    # Login, AdminDashboard, AdminControlCentre, TeamDashboard, UserManagement, AccessDenied
+│   ├── hooks/                    # useAuth, useConfig
+│   ├── services/                 # Strongly typed API client with CSRF & credentials
+│   └── styles/                   # Tailwind CSS tokens & accessibility rules
+├── public/                       # Favicons, WebManifest, ServiceWorker, OpenGraph preview images
+├── DEPLOYMENT_GUIDE.md           # End-to-end cloud setup guide (GCP, OAuth, Vercel)
+└── PROJECT_STATE.md              # Semantic project continuity record
 ```
 
 ---
 
-## 🚀 Setup & Installation Guide
+## 🔒 Security, Whitelisting & Privacy Governance
 
-### 1. Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm** or **pnpm**
-- A **Google Cloud Platform (GCP)** account
-- A **Google Drive** folder or workspace to host the 13 Google Spreadsheets
-
----
-
-### 2. Google Cloud Setup
-
-#### Step A: Create a Google Cloud Project & Enable APIs
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new project named `KRITI-Tracker` (or your preferred name).
-3. Navigate to **APIs & Services > Library**.
-4. Search for **Google Sheets API** and click **Enable**.
-
-#### Step B: Create a Service Account for Google Sheets
-1. Navigate to **IAM & Admin > Service Accounts**.
-2. Click **Create Service Account**.
-   - Name: `kriti-sheets-sa`
-   - Description: `Service account for KRITI Tracker Google Sheets backend`
-3. Click **Create and Continue**, then click **Done**.
-4. Click on the created service account, go to the **Keys** tab, and click **Add Key > Create new key**.
-5. Select **JSON** and download the key file.
-6. Note the `client_email` (e.g. `kriti-sheets-sa@your-gcp-project.iam.gserviceaccount.com`) and `private_key`.
-
-#### Step C: Create Google OAuth 2.0 Client ID (for Google Sign-In)
-1. In Google Cloud Console, navigate to **APIs & Services > Credentials**.
-2. If prompted, configure the **OAuth consent screen** (User Type: Internal or External, App name: `KRITI Tracker`, User support email).
-3. Click **Create Credentials > OAuth client ID**.
-4. Application type: **Web application**.
-5. Authorized JavaScript origins:
-   - For local development: `http://localhost:5173`
-   - For production: `https://your-app.vercel.app`
-6. Copy the generated **Client ID** and **Client Secret**.
-
----
-
-### 3. Google Sheets Setup
-
-You need **13 independent spreadsheets**:
-1. **1 Master Spreadsheet**
-2. **12 Individual Team Spreadsheets** (for Team 01 through Team 12)
-
-#### Step A: Create the Spreadsheets
-1. In Google Drive, create a folder named `KRITI Tracker Database`.
-2. Create 1 spreadsheet named `KRITI - Master Spreadsheet`.
-3. Create 12 spreadsheets named `KRITI - Team 01 (Engineering)`, `KRITI - Team 02 (Product)`, ..., `KRITI - Team 12 (Operations)`.
-4. Copy the Spreadsheet ID from the URL of each sheet:
-   ```
-   https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit
-   ```
-
-#### Step B: Share All 13 Spreadsheets with the Service Account
-1. Open each of the 13 spreadsheets.
-2. Click the **Share** button in the top right.
-3. Paste the Service Account email address (`kriti-sheets-sa@...iam.gserviceaccount.com`).
-4. Set permissions to **Editor** and uncheck "Notify people", then click **Share**.
-
----
-
-### 4. Local Environment Configuration
-
-1. Clone or copy the project into your local workspace.
-2. Copy `.env.example` to `.env.local`:
-   ```bash
-   cp .env.example .env.local
-   ```
-3. Populate the variables in `.env.local`:
-   ```env
-   # Google OAuth Client
-   GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
-   GOOGLE_CLIENT_SECRET="your-client-secret"
-   VITE_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
-
-   # Service Account Credentials
-   GOOGLE_SERVICE_ACCOUNT_EMAIL="kriti-sheets-sa@your-project.iam.gserviceaccount.com"
-   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEvgIBA...\n-----END PRIVATE KEY-----\n"
-
-   # Master Spreadsheet ID
-   MASTER_SPREADSHEET_ID="your_master_spreadsheet_id_here"
-
-   # JSON Mapping of 12 Team IDs to their respective Spreadsheet IDs
-   TEAM_SPREADSHEET_IDS='{
-     "team-01": "id_for_team_01",
-     "team-02": "id_for_team_02",
-     "team-03": "id_for_team_03",
-     "team-04": "id_for_team_04",
-     "team-05": "id_for_team_05",
-     "team-06": "id_for_team_06",
-     "team-07": "id_for_team_07",
-     "team-08": "id_for_team_08",
-     "team-09": "id_for_team_09",
-     "team-10": "id_for_team_10",
-     "team-11": "id_for_team_11",
-     "team-12": "id_for_team_12"
-   }'
-
-   # Security & Session
-   SESSION_SECRET="generate-a-strong-32-byte-hex-random-session-secret"
-   INITIAL_ADMIN_EMAIL="admin@yourcompany.com"
-   ```
-
----
-
-### 5. Automated Setup & Verification Scripts
-
-We provide two automated Node/TypeScript scripts:
-
-#### Verify Service Account & Sheet Accessibility
-```bash
-npm run verify-connection
-```
-This tests authentication with Google Cloud and confirms read access to the Master Spreadsheet and Team Spreadsheets.
-
-#### Bootstrap & Format All 13 Spreadsheets
-```bash
-npm run setup-sheets
-```
-This automatically:
-- Creates required sheets in Master (`Team_Overview`, `Users`, `Global_Activity`, `Configuration`).
-- Sets up bold headers, frozen rows, and default settings.
-- Formats `Tasks` and `Activity_Log` sheets across all 12 team sheets.
-- Seeds realistic initial tasks with categories, priorities, deadlines, and mandatory flags.
-- Whitelists the `INITIAL_ADMIN_EMAIL` in the `Users` sheet as Super Admin.
-- Performs initial synchronization of `Team_Overview` in the Master Spreadsheet.
-
----
-
-### 6. Running Locally
-
-```bash
-# Start frontend Vite development server
-npm run dev
-```
-
-For testing Serverless API functions locally, install and run Vercel CLI:
-```bash
-npm install -g vercel
-vercel dev
-```
-
----
-
-### 7. Deploying to Vercel
-
-1. Push the code to your GitHub repository.
-2. Open the [Vercel Dashboard](https://vercel.com/) and click **Add New > Project**.
-3. Import your GitHub repository.
-4. Framework Preset: **Vite**.
-5. Build and Output Settings: default (`npm run build`, output: `dist`).
-6. In **Environment Variables**, add all keys from `.env.example`:
-   - `GOOGLE_CLIENT_ID`
-   - `GOOGLE_CLIENT_SECRET`
-   - `VITE_GOOGLE_CLIENT_ID`
-   - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
-   - `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` (ensure newlines are preserved, or use `GOOGLE_SERVICE_ACCOUNT_KEY_BASE64`)
-   - `MASTER_SPREADSHEET_ID`
-   - `TEAM_SPREADSHEET_IDS`
-   - `SESSION_SECRET`
-   - `INITIAL_ADMIN_EMAIL`
-7. Click **Deploy**.
-8. After deployment, update your Google Cloud Console OAuth Client ID to include your production Vercel URL (e.g. `https://kriti-tracker.vercel.app`) under **Authorized JavaScript Origins**.
-
-For the detailed, step-by-step walkthrough with screenshots, blank sheet auto-provisioning instructions, and troubleshooting edge cases, refer to the full [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
-
----
-
-## 🔒 Security & Access Control
-
-| Requirement | Implementation Details |
+| Security Layer | Implementation Mechanism |
 |---|---|
-| **Google Sign-In** | Google OAuth 2.0 with ID token verification via `google-auth-library`. |
-| **Mandatory Whitelist** | Checked against `Users` sheet in Master Spreadsheet. Unlisted accounts are rejected with 403 Forbidden. |
-| **Request-time Revalidation** | Every authenticated request verifies that the user is STILL in the whitelist and active. |
-| **Strict Team Isolation** | Team heads can only query or mutate their assigned `teamId`. Server returns 403 Forbidden on foreign team access. |
-| **PWA & Offline Shell** | Web App Manifest (`manifest.webmanifest`), Service Worker (`sw.js`), 192/512 maskable icons, and offline caching. |
+| **Google Sign-In Verification** | Validated via `google-auth-library` (cryptographic signature, audience, issuer, expiry, `email_verified`). |
+| **Mandatory Whitelist** | User email must exist with `Active` status in the Master `Users` Google Sheet. Non-whitelisted accounts receive 403 Forbidden. |
+| **Per-Request Revalidation** | Whitelist status is rechecked on **every authenticated API call**. Revoked members lose access instantly. |
+| **Strict Team Isolation** | Team heads can only query or mutate their assigned committee. Cross-team requests return 403 Forbidden. |
+| **Session Security** | Signed JWT stored in `HttpOnly`, `SameSite=Lax`, `Secure` cookies. Zero localStorage credential leakage. |
+| **CSRF Defense** | Cryptographic double-submit token verification with constant-time equality check (`crypto.timingSafeEqual`). |
+| **Healthcare Privacy & Zero PHI**| The platform is strictly an operational workflow tracker. Zero Protected Health Information (PHI) is processed or stored. |
 
 ---
 
-## 📱 Progressive Web App (PWA)
+## 🧪 Local Testing & Zero-Leak Sandbox
 
-KRITI Tracker is a fully compliant Progressive Web App:
-- **Mobile & Desktop Installation:** Can be installed directly to home screens and desktops with standalone window display.
-- **Service Worker (`sw.js`):** Employs network-first strategy for navigation and stale-while-revalidate for static assets, with secure bypass for live Google Sheets API calls.
-- **Specification Compliance:** Adheres to multi-platform icon guidelines with safe-zone maskable 512x512 icons, Apple touch icons, and Google Search Central 48x48 favicons.
+KRITI Tracker includes an automated zero-leak testing sandbox for local development:
+
+### 1. Tripwire Test Suite
+Run the 5-point production security test:
+```bash
+npm run test:dev-login
+```
+Validates that:
+- Dev login endpoint immediately returns `404 Not Found` when `NODE_ENV === 'production'`.
+- Production builds completely tree-shake and omit test bypass tokens.
+- Invalid or forged persona keys are rejected with `400 Bad Request`.
+
+### 2. Available QA Personas
+- 👑 **Congress Director (`admin.qa@company.com`)**: Full access to all 12 committees, Control Centre, User Management.
+- 🩺 **Scientific Program Chair (`lead.eng@company.com`)**: Assigned to Team 01; tests task mutations and remarks.
+- 💉 **CME Workshops Director (`lead.ops@company.com`)**: Assigned to Team 02; tests cross-committee RBAC isolation.
+- 👁️ **Medical Ethics Auditor (`auditor.qa@company.com`)**: Read-only observer across all committees.
 
 ---
 
-## 🧪 Local Testing & Zero-Leak Auth Bypass
+## ☁️ Production Deployment to Vercel
 
-KRITI Tracker includes a local development and QA testing sandbox that enables full end-to-end testing across all roles without requiring live Google Cloud OAuth credentials or Google Sheets API keys.
+For comprehensive, step-by-step instructions on setting up Google Cloud Console, creating a Service Account key, configuring OAuth Client IDs, and deploying to Vercel, refer to:
 
-### Zero-Leak Guarantee
-1. **Dead-Code Elimination:** All testing bypass UI and mock handlers are strictly compiled out in production builds unless `VITE_ENABLE_DEV_LOGIN="true"` is explicitly set during build.
-2. **Serverless Tripwire:** `/api/auth/dev-login` immediately throws `404 Not Found` in production (`NODE_ENV === 'production'` or `VERCEL_ENV === 'production'`).
-3. **Automated Verification:** Run `npm run test:dev-login` to execute the 5-point production tripwire test suite.
-
-### Available Test Personas
-- 👑 **Congress Director (`admin.qa@company.com`)**: Full access to all 12 medical committees, Admin Dashboard, Admin Control Centre, and User Management.
-- 🩺 **Scientific Committee Head (`lead.eng@company.com`)**: Assigned to Team 01 (Scientific Committee & Medical Abstracts); can complete tasks and update clinical remarks.
-- 💉 **Clinical CME Director (`lead.ops@company.com`)**: Assigned to Team 02 (Clinical Workshops & CME Accreditation); tests cross-committee RBAC isolation.
-- 👁️ **Medical Ethics Auditor (`auditor.qa@company.com`)**: Read-only viewer across committees; tests mutation prevention guards.
-
-### Testing Locally
-1. Run local preview server:
-   ```bash
-   npm run preview -- --port 4173 --host 0.0.0.0
-   ```
-2. Open `http://localhost:4173` in your browser.
-3. On the login screen, click any persona in the **🧪 QA Testing Auth Bypass** panel to enter the app.
-4. Use the **🧪 Persona Switcher** in the top navigation bar to test role switching and RBAC boundaries in real time.
+👉 **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)**
 
 ---
 
@@ -373,5 +288,5 @@ KRITI Tracker includes a local development and QA testing sandbox that enables f
 
 This project is open-source and licensed under the [MIT License](LICENSE).
 
-Copyright © 2026 [Deekshith Vodela](https://www.linkedin.com/in/deekshithvodela/) and KRITI Tracker Contributors.
+Copyright © 2026 **[Deekshith Vodela](https://www.linkedin.com/in/deekshithvodela/)** and KRITI Tracker Contributors.
 

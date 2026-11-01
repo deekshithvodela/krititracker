@@ -1,4 +1,4 @@
-import handler, { DEV_PERSONAS } from '../api/auth/dev-login';
+import handler, { DEV_PERSONAS } from '../api/_handlers/auth/dev-login';
 
 interface MockResponse {
   statusCode: number;

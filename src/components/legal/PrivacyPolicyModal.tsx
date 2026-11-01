@@ -26,7 +26,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
             </div>
             <div>
               <p className="font-bold text-slate-900 text-xs">
-                KRITI MedEvent Tracker Privacy Governance
+                KRITI Tracker Privacy Governance
               </p>
               <p className="text-[11px] text-slate-500">
                 Maintained by{' '}
@@ -57,7 +57,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
             <span>1. Google OAuth 2.0 Authentication Boundaries</span>
           </div>
           <p className="text-slate-600 leading-relaxed text-[11.5px]">
-            KRITI MedEvent Tracker utilizes Google Identity Services strictly for federated identity verification. The application requests <strong>only minimal non-sensitive scopes</strong> (<code className="px-1 py-0.5 bg-slate-100 text-slate-800 rounded font-mono text-[10.5px]">openid</code>, <code className="px-1 py-0.5 bg-slate-100 text-slate-800 rounded font-mono text-[10.5px]">email</code>, <code className="px-1 py-0.5 bg-slate-100 text-slate-800 rounded font-mono text-[10.5px]">profile</code>).
+            KRITI Tracker utilizes Google Identity Services strictly for federated identity verification. The application requests <strong>only minimal non-sensitive scopes</strong> (<code className="px-1 py-0.5 bg-slate-100 text-slate-800 rounded font-mono text-[10.5px]">openid</code>, <code className="px-1 py-0.5 bg-slate-100 text-slate-800 rounded font-mono text-[10.5px]">email</code>, <code className="px-1 py-0.5 bg-slate-100 text-slate-800 rounded font-mono text-[10.5px]">profile</code>).
           </p>
           <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200/60 text-amber-900 text-[11px] flex items-start gap-2">
             <EyeOff className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />

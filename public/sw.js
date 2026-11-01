@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kriti-tracker-v1';
+const CACHE_NAME = 'kriti-tracker-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', event => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match('/index.html') as Promise<Response>;
+        return caches.match('/index.html');
       })
     );
     return;

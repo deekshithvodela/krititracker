@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession, enforceAdmin } from '../_lib/auth';
-import { fetchMasterTeamOverview, fetchGlobalActivityLog } from '../_lib/sheets';
-import type { AdminDashboardMetrics } from '../../src/types';
+import { authenticateSession, enforceAdmin } from '../../_lib/auth';
+import { fetchMasterTeamOverview, fetchGlobalActivityLog } from '../../_lib/sheets';
+import type { AdminDashboardMetrics } from '../../../src/types';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {

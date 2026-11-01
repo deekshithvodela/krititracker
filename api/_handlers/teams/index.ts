@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession } from '../_lib/auth';
-import { fetchMasterTeamOverview } from '../_lib/sheets';
+import { authenticateSession } from '../../_lib/auth';
+import { fetchMasterTeamOverview } from '../../_lib/sheets';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {

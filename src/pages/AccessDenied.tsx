@@ -1,16 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, LogOut, Lock, ExternalLink } from 'lucide-react';
+import { ShieldAlert, LogOut, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/ui/Button';
-import { MitLicenseModal } from '../components/legal/MitLicenseModal';
-import { PrivacyPolicyModal } from '../components/legal/PrivacyPolicyModal';
 
 export const AccessDenied: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isMitModalOpen, setIsMitModalOpen] = useState(false);
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   const handleSwitchAccount = async () => {
     await logout();
@@ -30,7 +26,7 @@ export const AccessDenied: React.FC = () => {
               Access Restricted
             </h1>
             <p className="text-sm text-slate-600 leading-relaxed">
-              Your email is not whitelisted. Access to the KRITI MedEvent Congress Management System is strictly restricted to pre-authorized medical committee members, faculty, and administrators.
+              Your email is not whitelisted. Access to KRITI Tracker (Kakatiya Research Initiative for Transformative Innovation) is strictly restricted to pre-authorized committee members, leads, and administrators.
             </p>
           </div>
 
@@ -83,41 +79,6 @@ export const AccessDenied: React.FC = () => {
         <p className="mt-6 text-center text-xs text-slate-500">
           Need access? Please contact the Medical Organizing Committee to whitelist your email address in the Master Registry.
         </p>
-
-        {/* Footer with Copyright and Legal Modal triggers */}
-        <div className="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-center gap-3 text-xs text-slate-500">
-          <div>
-            <span>Copyright © 2026 </span>
-            <a
-              href="https://www.linkedin.com/in/deekshithvodela/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-primary-700 hover:text-primary-800 underline underline-offset-2 transition-colors inline-flex items-center gap-0.5"
-            >
-              <span>Deekshith Vodela</span>
-              <ExternalLink className="w-3 h-3 inline" />
-            </a>
-          </div>
-          <span className="hidden sm:inline text-slate-300">•</span>
-          <button
-            type="button"
-            onClick={() => setIsMitModalOpen(true)}
-            className="text-primary-600 hover:text-primary-800 font-semibold underline underline-offset-2 px-1.5 py-0.5 rounded hover:bg-primary-50 transition-all"
-          >
-            MIT License
-          </button>
-          <span className="hidden sm:inline text-slate-300">•</span>
-          <button
-            type="button"
-            onClick={() => setIsPrivacyModalOpen(true)}
-            className="text-primary-600 hover:text-primary-800 font-semibold underline underline-offset-2 px-1.5 py-0.5 rounded hover:bg-primary-50 transition-all"
-          >
-            Privacy Policy
-          </button>
-        </div>
-
-        <MitLicenseModal isOpen={isMitModalOpen} onClose={() => setIsMitModalOpen(false)} />
-        <PrivacyPolicyModal isOpen={isPrivacyModalOpen} onClose={() => setIsPrivacyModalOpen(false)} />
       </div>
     </div>
   );

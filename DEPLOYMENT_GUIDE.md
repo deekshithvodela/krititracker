@@ -174,6 +174,15 @@ This enables the "Sign in with Google" button on the login screen.
 
 The Master Spreadsheet holds global state, user access, and team registries.
 
+> [!TIP]
+> **Recommended 1-Step Setup: Google Drive Folder Sharing**  
+> Instead of manually sharing 13+ spreadsheets individually with your Service Account email:
+> 1. In Google Drive, create a dedicated folder (e.g. `KRITI - Database & Spreadsheets`).
+> 2. Click **Share** on this folder and add your **Service Account email** as **Editor**.
+> 3. Create or move your Master Spreadsheet and all Committee Spreadsheets into this folder.
+> 4. Google Drive automatically propagates Editor permissions to every spreadsheet inside the folder!
+> 5. **Automated User Permission Sync:** Copy the Folder ID from the browser URL (`drive.google.com/drive/folders/<FOLDER_ID>`) and set `GOOGLE_DRIVE_FOLDER_ID=<FOLDER_ID>`. Whenever an administrator whitelists a new doctor or committee head in the Control Centre, the system automatically shares the Google Drive folder with their email (`writer` for Admins/Heads, `reader` for Viewers) and revokes access upon deletion!
+
 ### Automated Setup via CLI (Recommended):
 Run the automated initialization script from the workspace root:
 ```bash
@@ -186,7 +195,7 @@ The script creates all required tabs (`Authorized_Users`, `Team_Overview`, `Glob
 ### Manual Setup (Alternative):
 If creating the Master Spreadsheet manually:
 1. Create a blank Google Sheet titled `KRITI - Master Database`.
-2. Share with your Service Account email as **Editor**.
+2. Share with your Service Account email as **Editor** (or place inside your shared Drive folder).
 3. Create the following 4 tabs with exact header rows:
    - **`Authorized_Users` (Row 1):**
      `Email | Name | Role | Team_ID | Active | Added_By | Added_At | Last_Login`
@@ -213,6 +222,7 @@ Configure these environment variables in your local `.env` and Vercel Project Se
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Serverless API | Inside downloaded Service Account JSON (`client_email`) | No | Used as fallback if Base64 key not used. |
 | `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` | Serverless API | Inside downloaded Service Account JSON (`private_key`) | **YES** | Used as fallback if Base64 key not used. |
 | `MASTER_SPREADSHEET_ID` | Serverless API | Master Google Sheet URL ID (`/d/<ID>/edit`) | No | Primary registry for users, teams, and audits. |
+| `GOOGLE_DRIVE_FOLDER_ID` | Serverless API | Google Drive Folder URL ID (`/folders/<ID>`) | No | **Optional.** Auto-shares Google Drive folder with newly whitelisted team emails. |
 | `SESSION_SECRET` | Serverless API | Generate with: `openssl rand -hex 32` | **YES** | 256-bit key used to sign encrypted HTTP-only session cookies. |
 | `CSRF_SECRET` | Serverless API | Generate with: `openssl rand -hex 32` | **YES** | Secret key for double-submit CSRF tokens. |
 | `INITIAL_ADMIN_EMAIL` | Serverless API | Your personal Google email address | No | Auto-whitelists you as Super Admin on first launch. |
@@ -242,6 +252,9 @@ Under **Environment Variables**, add each variable from Section 6.
 
 ### Step 7.4: Deploy & Domain Setup
 1. Click **Deploy**. Vercel will build the frontend bundle and package the `/api` directory into Serverless Functions.
+   > [!NOTE]
+   > **Vercel Hobby Plan Optimized (Zero-Cost Deployment):**
+   > Vercel's free Hobby plan enforces a strict limit of **12 Serverless Functions** per deployment. KRITI Tracker is architected with a single unified entrypoint router (`api/index.ts`) utilizing internal handlers (`api/_handlers/`), consuming **exactly 1 Serverless Function** (1/12). You do not need a paid Vercel Pro team plan ($20/month) to deploy this project.
 2. Once complete, copy your production domain (e.g. `https://kriti-tracker.vercel.app`).
 3. Return to **GCP Console &rarr; Credentials &rarr; Your OAuth 2.0 Web Client**.
 4. Add `https://kriti-tracker.vercel.app` to **Authorized JavaScript origins**.
