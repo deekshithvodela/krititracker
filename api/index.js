@@ -10,33 +10,36 @@ var sheetsClient = null;
 function sanitizePrivateKey(rawKey) {
   if (!rawKey)
     return "";
-  let key = rawKey.trim();
-  if (key.startsWith("{") && key.endsWith("}")) {
+  let str = String(rawKey).trim();
+  if (str.startsWith("{") && str.endsWith("}")) {
     try {
-      const parsed = JSON.parse(key);
+      const parsed = JSON.parse(str);
       if (parsed.private_key) {
-        key = parsed.private_key;
+        return sanitizePrivateKey(parsed.private_key);
       }
     } catch {
     }
   }
-  if (key.startsWith('"') && key.endsWith('"') || key.startsWith("'") && key.endsWith("'")) {
-    key = key.slice(1, -1).trim();
+  str = str.replace(/\\r\\n/g, "\n").replace(/\\\\r\\\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\\\n/g, "\n").replace(/\r\n/g, "\n");
+  const match = str.match(/(-----BEGIN[ A-Z_-]*PRIVATE KEY-----)([\s\S]*?)(-----END[ A-Z_-]*PRIVATE KEY-----)/);
+  if (match) {
+    const header = match[1];
+    const body = match[2].replace(/[^A-Za-z0-9+/=]/g, "");
+    const footer = match[3];
+    const chunks = body.match(/.{1,64}/g) || [];
+    return `${header}
+${chunks.join("\n")}
+${footer}
+`;
   }
-  key = key.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
-  if (key.startsWith('"') && key.endsWith('"') || key.startsWith("'") && key.endsWith("'")) {
-    key = key.slice(1, -1).trim();
-  }
-  if (!key.includes("-----BEGIN PRIVATE KEY-----")) {
-    try {
-      const decoded = Buffer.from(key, "base64").toString("utf8");
-      if (decoded.includes("-----BEGIN PRIVATE KEY-----") || decoded.startsWith("{")) {
-        return sanitizePrivateKey(decoded);
-      }
-    } catch {
+  try {
+    const decoded = Buffer.from(str, "base64").toString("utf8");
+    if (decoded.includes("PRIVATE KEY") || decoded.startsWith("{")) {
+      return sanitizePrivateKey(decoded);
     }
+  } catch {
   }
-  return key;
+  return str;
 }
 function resolveServiceAccountCredentials() {
   if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_BASE64) {

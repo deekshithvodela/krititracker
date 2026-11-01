@@ -14,43 +14,48 @@ let sheetsClient: sheets_v4.Sheets | null = null;
  */
 export function sanitizePrivateKey(rawKey: string | undefined): string {
   if (!rawKey) return '';
-  let key = rawKey.trim();
+  let str = String(rawKey).trim();
 
   // If user pasted full Service Account JSON into the private key variable
-  if (key.startsWith('{') && key.endsWith('}')) {
+  if (str.startsWith('{') && str.endsWith('}')) {
     try {
-      const parsed = JSON.parse(key);
+      const parsed = JSON.parse(str);
       if (parsed.private_key) {
-        key = parsed.private_key;
+        return sanitizePrivateKey(parsed.private_key);
       }
     } catch {}
   }
 
-  // Strip wrapping quotes
-  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
-    key = key.slice(1, -1).trim();
-  }
+  // Normalize all variations of escaped newlines
+  str = str
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\\\r\\\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\\\n/g, '\n')
+    .replace(/\r\n/g, '\n');
 
-  // Normalize escaped newlines
-  key = key.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
-
-  // Strip wrapping quotes again if double-escaped
-  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
-    key = key.slice(1, -1).trim();
+  // Regex extract exact PEM header, body, and footer (ignores surrounding quotes, prefixes, commas)
+  const match = str.match(/(-----BEGIN[ A-Z_-]*PRIVATE KEY-----)([\s\S]*?)(-----END[ A-Z_-]*PRIVATE KEY-----)/);
+  if (match) {
+    const header = match[1];
+    // Strip all non-base64 characters from body (removes quotes, spaces, backslashes, commas)
+    const body = match[2].replace(/[^A-Za-z0-9+/=]/g, '');
+    const footer = match[3];
+    const chunks = body.match(/.{1,64}/g) || [];
+    return `${header}\n${chunks.join('\n')}\n${footer}\n`;
   }
 
   // If missing standard PEM header, test if it was base64 encoded
-  if (!key.includes('-----BEGIN PRIVATE KEY-----')) {
-    try {
-      const decoded = Buffer.from(key, 'base64').toString('utf8');
-      if (decoded.includes('-----BEGIN PRIVATE KEY-----') || decoded.startsWith('{')) {
-        return sanitizePrivateKey(decoded);
-      }
-    } catch {}
-  }
+  try {
+    const decoded = Buffer.from(str, 'base64').toString('utf8');
+    if (decoded.includes('PRIVATE KEY') || decoded.startsWith('{')) {
+      return sanitizePrivateKey(decoded);
+    }
+  } catch {}
 
-  return key;
+  return str;
 }
+
 
 /**
  * Resolves Service Account credentials across multiple supported environment formats:
