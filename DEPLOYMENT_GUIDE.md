@@ -254,7 +254,7 @@ Under **Environment Variables**, add each variable from Section 6.
 1. Click **Deploy**. Vercel will build the frontend bundle and package the `/api` directory into Serverless Functions.
    > [!NOTE]
    > **Vercel Hobby Plan Optimized (Zero-Cost Deployment):**
-   > Vercel's free Hobby plan enforces a strict limit of **12 Serverless Functions** per deployment. KRITI Tracker is architected with a single unified entrypoint router (`api/index.ts`) utilizing internal handlers (`api/_handlers/`), consuming **exactly 1 Serverless Function** (1/12). You do not need a paid Vercel Pro team plan ($20/month) to deploy this project.
+   > Vercel's free Hobby plan enforces a strict limit of **12 Serverless Functions** per deployment. KRITI Tracker bundles the complete backend into a single production entrypoint (`api/index.js`) using `esbuild`, consuming **exactly 1 Serverless Function** (1/12). You do not need a paid Vercel Pro team plan ($20/month) to deploy this project.
 2. Once complete, copy your production domain (e.g. `https://kriti-tracker.vercel.app`).
 3. Return to **GCP Console &rarr; Credentials &rarr; Your OAuth 2.0 Web Client**.
 4. Add `https://kriti-tracker.vercel.app` to **Authorized JavaScript origins**.
@@ -300,6 +300,13 @@ Complete this checklist upon deployment:
 ### Problem 4: "Google Sign-In Error: popup_closed_by_user or origin_mismatch"
 - **Root Cause:** The production Vercel URL has not been added to Google OAuth Authorized JavaScript Origins.
 - **Fix:** In GCP Console &rarr; Credentials &rarr; OAuth 2.0 Client &rarr; add `https://your-domain.vercel.app` to Authorized JavaScript Origins &rarr; wait 2 minutes for Google propagation.
+
+### Problem 5: "Authorization Error: An unexpected error occurred" or "FUNCTION_INVOCATION_FAILED"
+- **Root Cause:** Missing required environment variables on Vercel or unhandled function invocation error.
+- **Fix:**
+  1. Verify your Vercel Project Settings &rarr; **Environment Variables** contain all required keys: `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL` & `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY` (or `GOOGLE_SERVICE_ACCOUNT_KEY_BASE64`), `MASTER_SPREADSHEET_ID`, and `SESSION_SECRET`.
+  2. Inspect real-time serverless logs: Go to **Vercel Dashboard &rarr; Deployments &rarr; select deployment &rarr; Functions &rarr; api/index.js &rarr; Logs**.
+  3. Test the live health endpoint directly: `curl -i https://your-domain.vercel.app/api/health` should return HTTP 200 JSON `{ success: true, status: 'healthy' }`.
 
 ---
 

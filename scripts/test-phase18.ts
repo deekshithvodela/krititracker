@@ -1,4 +1,4 @@
-import routerHandler from '../api/index';
+import routerHandler from '../server/index';
 import { execSync } from 'child_process';
 
 interface MockResponse {
@@ -35,12 +35,12 @@ async function runTests() {
   console.log('🧪 Starting Phase 18 Vercel Serverless Function Optimization Tests...\n');
 
   // Test 1: Function count assertion (Must be <= 12 for Hobby plan; target is exactly 1)
-  const stdout = execSync('find api -maxdepth 1 -name "*.ts" ! -name "_*"', { encoding: 'utf-8' }).trim();
+  const stdout = execSync('find api -maxdepth 1 -type f ! -name ".*"', { encoding: 'utf-8' }).trim();
   const functionFiles = stdout.split('\n').filter(Boolean);
-  if (functionFiles.length === 1 && functionFiles[0] === 'api/index.ts') {
-    console.log('✅ Test 1 Passed: Exactly 1 Serverless Function detected (api/index.ts). 100% Hobby quota compliant (1/12 used).');
+  if (functionFiles.length === 1 && functionFiles[0] === 'api/index.js') {
+    console.log('✅ Test 1 Passed: Exactly 1 Serverless Function detected (api/index.js). 100% Hobby quota compliant (1/12 used).');
   } else {
-    throw new Error(`Test 1 Failed: Expected 1 function, found ${functionFiles.length}: ${JSON.stringify(functionFiles)}`);
+    throw new Error(`Test 1 Failed: Expected 1 function (api/index.js), found ${functionFiles.length}: ${JSON.stringify(functionFiles)}`);
   }
 
   // Test 2: Router health / root endpoint

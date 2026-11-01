@@ -44,7 +44,11 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   const contentType = res.headers.get('content-type') || '';
   let data: any = null;
   if (contentType.includes('application/json')) {
-    data = await res.json();
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
   }
 
   if (data?.data?.csrfToken) {
@@ -52,7 +56,17 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   }
 
   if (!res.ok) {
-    const errorMsg = data?.error || res.statusText || 'An unexpected error occurred.';
+    let errorMsg = data?.error;
+    if (!errorMsg) {
+      if (contentType.includes('text/plain') || contentType.includes('text/html')) {
+        const text = await res.text().catch(() => '');
+        if (text && text.trim().length > 0) {
+          const cleanText = text.trim();
+          errorMsg = cleanText.length < 200 ? cleanText : cleanText.slice(0, 200) + '...';
+        }
+      }
+    }
+    errorMsg = errorMsg || res.statusText || 'An unexpected error occurred.';
     throw new Error(errorMsg);
   }
 

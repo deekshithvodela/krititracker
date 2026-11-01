@@ -4,7 +4,7 @@ const { chromium } = req('/home/drover/.npm/_npx/e41f203b7505f1fb/node_modules/p
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getDriveFolderId, shareDriveFolderWithUser, removeDriveFolderUser, listSpreadsheetsInFolder } from '../api/_lib/drive';
+import { getDriveFolderId, shareDriveFolderWithUser, removeDriveFolderUser, listSpreadsheetsInFolder } from '../server/_lib/drive';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,19 +19,19 @@ async function runTests() {
     typeof removeDriveFolderUser === 'function' &&
     typeof listSpreadsheetsInFolder === 'function'
   ) {
-    console.log('✅ Test 1 Passed: api/_lib/drive.ts exports all required Drive integration functions.');
+    console.log('✅ Test 1 Passed: server/_lib/drive.ts exports all required Drive integration functions.');
   } else {
-    throw new Error('Test 1 Failed: Missing exported functions in api/_lib/drive.ts');
+    throw new Error('Test 1 Failed: Missing exported functions in server/_lib/drive.ts');
   }
 
   // Test 2: Verify users.ts wires Drive integration
-  const usersCode = fs.readFileSync(path.join(__dirname, '../api/_handlers/admin/users.ts'), 'utf-8');
+  const usersCode = fs.readFileSync(path.join(__dirname, '../server/_handlers/admin/users.ts'), 'utf-8');
   if (
     usersCode.includes('getDriveFolderId') &&
     usersCode.includes('shareDriveFolderWithUser') &&
     usersCode.includes('removeDriveFolderUser')
   ) {
-    console.log('✅ Test 2 Passed: api/_handlers/admin/users.ts properly integrates automatic Drive folder sharing and revocation.');
+    console.log('✅ Test 2 Passed: server/_handlers/admin/users.ts properly integrates automatic Drive folder sharing and revocation.');
   } else {
     throw new Error('Test 2 Failed: Drive integration not wired in users.ts');
   }

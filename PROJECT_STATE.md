@@ -97,18 +97,23 @@ Provide a reliable, responsive, and secure system where:
 - Mobile Hero Footprint: `PASS` (135.5px fixed height on mobile, 60% reduction from 335px)
 - Mobile Scroll Stability: `PASS` (Delta: 0px on uncheck and check; zero layout shift)
 - Phase 19 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase19.ts`)
-- Vercel Discovered Functions: `PASS` (Exactly 1 function: `api/index.ts`, 1/12 Hobby quota used)
+- Vercel Discovered Functions: `PASS` (Exactly 1 function: `api/index.js`, 1/12 Hobby quota used)
+- Server Production Bundle: `PASS` (Compiled `api/index.js` via esbuild, 73.5 KB, zero relative imports)
+- Node.js ESM Import Resolution: `PASS` (Zero `ERR_MODULE_NOT_FOUND` errors)
+- Phase 20 Verification Suite: `PASS (7/7 tests)` (`npx tsx scripts/test-phase20.ts`)
+- Phase 19 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase19.ts`)
 - Phase 18 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase18.ts`)
-- Production Build: `PASS` (`dist/assets/index-BqFdHh1i.js` built in 3.03s)
+- Production Build: `PASS` (`dist/assets/index-Df7vwP9d.js` built in 2.48s + `api/index.js` in 10ms)
 - TypeScript Compilation: `PASS (0 errors)` (`npm run lint`)
 - Zero-Leak Tripwire Tests: `PASS (5/5 tests)` (`npm run test:dev-login`)
-- Phase 17 Verification Suite: `PASS (7/7 tests)` (`npx tsx scripts/test-phase17.ts`)
-- Phase 16 Verification Suite: `PASS (8/8 tests)` (`npx tsx scripts/test-phase16.ts`)
-- Phase 15 Verification Suite: `PASS (5/5 tests)` (`npx tsx scripts/test-phase15.ts`)
-- Google Drive Permission Sync: `PASS` (`api/_lib/drive.ts` and `api/_handlers/admin/users.ts`)
 - Local Preview Server: `PASS` (HTTP 200 OK on `http://localhost:4173/`)
-- Audit Trail: `PASS` (`report.md` Section 15)
+- Audit Trail: `PASS` (`report.md` Section 16)
 
+## Completed
+- **Phase 20:** Vercel Serverless Function Crash Fix (`FUNCTION_INVOCATION_FAILED`), Standalone Single Production Bundle via `esbuild` (`api/index.js`), Hardened Router Exception Trapping, and Client Non-JSON Error Surfacing.
 
+## Open Issues
+- None. All 5 test suites pass with 100% green checkmarks. Ready for deployment.
 
-
+## Next Direction
+- Request user permission to commit and push the serverless bundle fix (`fix: standalone serverless bundle`) to remote `origin/main`.
