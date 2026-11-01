@@ -1,0 +1,102 @@
+# Project State: Centralised Medical Congress & Healthcare Event Management System (KRITI MedEvent Tracker)
+
+## Project Identity
+- **Project Name:** KRITI MedEvent Tracker (Centralised Medical Congress & Healthcare Event Management System)
+- **Purpose:** Production-ready full-stack web application tracking progress across 12 medical congress committees and clinical teams (dynamically extensible to any number of committees and sheets), with isolated committee checklists, prominent latest-pending-task workflow, administrative monitoring dashboard, dynamic Admin Control Centre, mandatory email whitelisting, interactive MIT License Modal, PWA offline support, and Google Sheets as the primary database.
+- **Current Phase:** Phase 14 - Production Quality Audit, 7-Vector Privacy Leak Check, OWASP Security Baseline, Brand Logo SVG Redesign, Multi-Platform OpenGraph Suite & Deployment Guide Verification (Completed)
+- **Repository Location:** `/home/drover/Projects/KRITI tracker`
+- **Technology Stack:**
+  - **Frontend:** React 18, Vite, TypeScript, Tailwind CSS, shadcn/ui, Lucide React, React Router 6, PWA Service Worker & Manifest
+  - **Backend:** Vercel Serverless Functions (`api/` directory), TypeScript, `googleapis`, `google-auth-library`, `jose` (secure JWT session cookies)
+  - **Database:** 13+ Google Sheets (1 Master Spreadsheet + Arbitrary Number of Individual Committee Spreadsheets) with Automated Blank Sheet Auto-Provisioning Engine
+  - **Authentication & RBAC:** Google OAuth 2.0 with strict server-side Email Whitelist verification against Master `Users` sheet on every request
+  - **Testing Auth Bypass:** Zero-leak environment-gated test persona bypass with mock store for local QA
+  - **License & Legal:** MIT License (Copyright © 2026 Deekshith Vodela), Privacy Policy & Healthcare Compliance Modal, `/privacy` standalone route
+  - **Brand & Assets:** Modern Squircle 'K' Monogram SVG, PWA Icon Suite (192, 512, maskable), Multi-Platform OpenGraph Suite (1200x630, 16:9, 4:3, 1:1) < 100 KB tier
+  - **Deployment Target:** Vercel (SPA + Serverless APIs)
+
+## Project Goal
+Provide a reliable, responsive, and secure system where:
+1. **PWA Support:** Installable as a Progressive Web App on mobile and desktop, with service worker offline shell caching, manifest, and compliance with PWA specifications.
+2. **Open Source Licensing:** MIT License governing project distribution with author attribution to Deekshith Vodela.
+3. **Mandatory Email Whitelisting:** Only explicitly whitelisted corporate emails can access the app.
+4. **Dynamic Control Centre:** Super Admin management of teams, categories, widgets, and settings without modifying source code.
+5. **Universal Task Creation:** Obvious "+ Add Task" buttons across Admin Dashboard, Team Dashboard, and table quick-actions.
+6. **Dynamic Scaling to Any Number of Sheets & Teams:** Super Admins can add new teams and link them to independent Google Spreadsheets (`spreadsheetId`) directly from the UI.
+7. **Automated Blank Sheet Auto-Provisioning:** Linking any blank Google Spreadsheet automatically provisions `Tasks` and `Activity_Log` tabs with standard column headers.
+8. **Zero-Leak Test Bypass:** Effortless local testing and QA of all roles (Super Admin, Team Head, Viewer) without leaking bypass code or test credentials into production.
+9. **Local Port Execution:** Live local running instance verified for testing.
+
+## Current State
+- Core full-stack application built and verified (`npm run build` PASS, 0 errors).
+- 7-Vector Privacy & Personal Data Leak check executed: 0 leaks in `src/`, `api/`, or `dist/`.
+- OWASP ASVS security baseline verified (cryptographic Google ID token verification, double-submit CSRF, HTTP-only cookies, RBAC).
+- `DEPLOYMENT_GUIDE.md` created answering blank sheet auto-provisioning and detailing all environment variable sources.
+- Brand logo SVG redesigned to match the UI's 'K' monogram; PWA icon suite regenerated.
+- Multi-Platform OpenGraph suite generated within the strictly < 100 KB tier (43 KB – 65 KB).
+- Privacy Policy modal and `/privacy` standalone page deployed.
+- Preview server live on port 4173 serving updated assets with HTTP 200 OK.
+
+## Core Decisions
+| Decision | Reason | Status | Affected Area |
+|---|---|---|---|
+| Zero-Leak Auth Bypass | Enable QA & testing without live Google OAuth or sheets API while guaranteeing zero leak in production | Active | Auth / Testing |
+| Dead-Code Elimination Guard | `import.meta.env.DEV \|\| import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true'` ensures bypass code is completely pruned from production builds | Active | Build / Frontend |
+| Backend Serverless Hard Tripwire | `/api/auth/dev-login` immediately returns 404 in production environment (`process.env.NODE_ENV === 'production'`) | Active | Security / API |
+| Blank Sheet Auto-Provisioning | Allows administrators to create a blank Google Sheet in Drive, paste its ID, and let KRITI auto-create schema tabs | Active | Backend / Sheets |
+| Base64 Service Account Key | Supports `GOOGLE_SERVICE_ACCOUNT_KEY_BASE64` to prevent multiline private key newline breakage on Vercel | Active | DevOps / Auth |
+| Multi-Platform OpenGraph Tier | Enforce strictly < 100 KB (50–95 KB) across 1.91:1, 16:9, 4:3, and 1:1 aspect ratios | Active | Social / SEO |
+| Standalone Service Worker & Manifest | Enable installability, home screen icon, and offline fallback | Active | PWA / Frontend |
+| PWA Specification Compliance | Compliance with Google Search Central & PWA 192/512 maskable standard | Active | PWA / Assets |
+| MIT License | Permissive open-source licensing requested by user | Active | Licensing / Legal |
+| Local Server on Dedicated Port | Allow immediate interactive testing and DOM verification | Active | DevOps / Testing |
+| Mandatory Email Whitelisting | Prevent unauthorized Google accounts from gaining access | Active | Auth Layer |
+| Request-time Authorization Revalidation | Ensures deactivated or role-changed users lose access immediately | Active | Security / API |
+| Master `Configuration` Sheet | Allows Super Admin to configure widgets, categories, and settings without code changes | Active | Data / Config |
+
+## Constraints
+- Zero leak of test bypass code, developer paths, or credentials to production.
+- PWA icons must adhere to safe-zone maskable padding and standard 192x192 / 512x512 resolutions.
+- OpenGraph images must strictly adhere to the < 100 KB tier.
+- Must run cleanly on local port for user testing.
+- Stay inside workspace `/home/drover/Projects/KRITI tracker`.
+- Do not run mutating git commands without explicit per-prompt user instruction.
+
+## Completed Milestones
+- [x] Initial project requirements review and architecture definition.
+- [x] Dependencies installed and build tooling configured.
+- [x] Data models, server types, and validation schemas implemented.
+- [x] Google Sheets API integration, sync engine, and CSRF protection implemented.
+- [x] Serverless endpoints for Auth, Teams, Tasks, Admin, Dynamic Config, and Teams created.
+- [x] Frontend design system, Navbar, AppShell, Checklist, and Dashboard components created.
+- [x] Mandatory Email Whitelisting implemented with request-time revalidation.
+- [x] Dynamic Admin Control Centre implemented.
+- [x] Automated setup & connectivity scripts implemented.
+- [x] Production build and verification audit passed (`npm run build`, `report.md`).
+- [x] MIT License added (`LICENSE` file and `README.md`).
+- [x] PWA Manifest, Service Worker (`sw.js`), 192/512 maskable icons, and Apple touch icons implemented.
+- [x] Local server launched on port 4173 and verified responding HTTP 200 OK.
+- [x] Phase 8: Zero-Leak Testing Auth Bypass & Local Test Sandbox implemented, verified with 5/5 passing tests, and documented.
+- [x] Phase 9: Universal "Add Task" Accessibility & Dynamic Scaling for Any Number of Teams/Sheets implemented, tested, and verified.
+- [x] Phase 10: "Team not found" Resolution, UI Glitch Fixes & Mobile Experience Optimization implemented, tested, and verified.
+- [x] Phase 11: Universal Task Expand Button & Rich Deliverable Details Drawer implemented, tested, and verified.
+- [x] Phase 12: Whitelist Login Access Notice, Deekshith Vodela Copyright & LinkedIn Link, Interactive MIT License Modal & Medical Event Transformation implemented, tested, and verified.
+- [x] Phase 14: Comprehensive Production Quality Audit, 7-Vector Privacy Leak Check, OWASP Security Baseline, Brand Logo SVG Redesign, Multi-Platform OpenGraph Suite & Deployment Guide Verification implemented, tested, and verified.
+
+## In Progress
+- None (All planned phases completed).
+
+## Verification Status
+- Production Build: `PASS`
+- TypeScript Compilation: `PASS (0 errors)`
+- Zero-Leak Tripwire Tests: `PASS (5/5 tests)`
+- 7-Vector Privacy Leak Scan: `PASS (0 leaks)`
+- PWA Manifest & Icons: `PASS`
+- OpenGraph Suite: `PASS (All images < 100 KB)`
+- Service Worker: `PASS`
+- Local Port 4173 Server: `RUNNING (HTTP 200 OK)`
+- Audit: `PASS` (`report.md` Section 10)
+
+
+
+

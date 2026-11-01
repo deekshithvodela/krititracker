@@ -1,0 +1,39 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Production build outputs
+dist/
+dist-ssr/
+*.local
+
+# Vercel output
+.vercel/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Service account secrets & credentials
+*.pem
+service-account*.json
+credentials.json
+
+# IDE and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Persistent workspace planning & audit tracking (Knowledge Item Standard)
+implementation_plan.md
+report.md
