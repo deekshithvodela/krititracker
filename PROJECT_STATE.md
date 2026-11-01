@@ -87,35 +87,39 @@ Provide a reliable, responsive, and secure system where:
 - [x] Phase 16: Mobile UI/UX Industry Standard Overhaul — Zero Layout Shift, Natural Word-Wrapping, and Decluttered Arrangement implemented, tested, and verified.
 - [x] Phase 17: Branding Refinement & Mobile Hamburger Menu Decluttering (Removed MedEvent, updated to Kakatiya Research Initiative for Transformative Innovation, removed legal modals from mobile drawer) implemented, tested, and verified.
 
-- [x] Phase 18: Vercel Serverless Function Consolidation to 1 Lambda (Resolved Hobby Plan 12-function limit, consolidated 18 endpoints into `api/_handlers/` dispatched by `api/index.ts`, updated `vercel.json` rewrite, all tests pass).
-- [x] Phase 19: Mobile Layout Shift Elimination (compact fixed-height Hero card ~135px, 60% footprint reduction, 0px scroll jump) & Google Drive Folder Integration (auto-share Drive folder on whitelist, 1-step permissions, auto-discovery).
+- [x] Phase 20: Vercel Serverless Function Crash Fix (`FUNCTION_INVOCATION_FAILED`), Standalone Single Production Bundle via `esbuild` (`api/index.js`), Hardened Router Exception Trapping, and Client Non-JSON Error Surfacing.
+- [x] Phase 21: Bulletproof Private Key Sanitizer (`sanitizePrivateKey`) with Regex PEM Extraction and Unified Multi-Format Credentials Resolver (`resolveServiceAccountCredentials`).
+- [x] Phase 22: Resilient Master Spreadsheet Tab Auto-Discovery, Multi-Schema Reconciliation (`Users` vs `Authorized_Users`), and Automated Master Spreadsheet Provisioning Engine.
 
 ## In Progress
-- Completed Phase 19. Ready for review and deployment.
+- Completed Phase 22. Verified across all test suites, ready for user approval to commit and deploy.
 
 ## Verification Status
-- Mobile Hero Footprint: `PASS` (135.5px fixed height on mobile, 60% reduction from 335px)
-- Mobile Scroll Stability: `PASS` (Delta: 0px on uncheck and check; zero layout shift)
-- Phase 19 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase19.ts`)
-- Vercel Discovered Functions: `PASS` (Exactly 1 function: `api/index.js`, 1/12 Hobby quota used)
-- Server Production Bundle: `PASS` (Compiled `api/index.js` via esbuild, 73.5 KB, zero relative imports)
-- Node.js ESM Import Resolution: `PASS` (Zero `ERR_MODULE_NOT_FOUND` errors)
+- Phase 22 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase22.ts`)
+- Multi-Schema Discovery: `PASS` (Format A: `Authorized_Users` with Col 0 Email; Format B: `Users` with Col 2 Email)
+- Blank Sheet Auto-Provisioning: `PASS` (Auto-creates `Users`, `Team_Overview`, `Global_Activity`, `Configuration` + initial admin seed)
+- Dynamic Activity & Config Resolvers: `PASS` (Resolves `Global_Activity_Log` / `Global_Activity` and `App_Config` / `Configuration`)
+- Phase 21 Verification Suite: `PASS (7/7 tests)` (`npx tsx scripts/test-phase21.ts`)
 - Phase 20 Verification Suite: `PASS (7/7 tests)` (`npx tsx scripts/test-phase20.ts`)
 - Phase 19 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase19.ts`)
 - Phase 18 Verification Suite: `PASS (6/6 tests)` (`npx tsx scripts/test-phase18.ts`)
-- Production Build: `PASS` (`dist/assets/index-Df7vwP9d.js` built in 2.48s + `api/index.js` in 10ms)
-- TypeScript Compilation: `PASS (0 errors)` (`npm run lint`)
 - Zero-Leak Tripwire Tests: `PASS (5/5 tests)` (`npm run test:dev-login`)
-- Local Preview Server: `PASS` (HTTP 200 OK on `http://localhost:4173/`)
-- Audit Trail: `PASS` (`report.md` Section 17)
-- Private Key Sanitizer: `PASS` (`scripts/test-phase21.ts` 7/7 edge cases passed)
+- Vercel Discovered Functions: `PASS` (Exactly 1 function: `api/index.js`, 1/12 Hobby quota used)
+- Server Production Bundle: `PASS` (`api/index.js` compiled via esbuild, 88.3 KB)
+- Node.js ESM Import Resolution: `PASS` (Zero `ERR_MODULE_NOT_FOUND` errors)
+- Production Build: `PASS` (`dist/assets/index-Df7vwP9d.js` in 2.49s + `api/index.js` in 13ms)
+- TypeScript Compilation: `PASS (0 errors)` (`npm run lint`)
+- Audit Trail: `PASS` (`report.md` Section 18)
 
 ## Completed
 - **Phase 20:** Vercel Serverless Function Crash Fix (`FUNCTION_INVOCATION_FAILED`), Standalone Single Production Bundle via `esbuild` (`api/index.js`), Hardened Router Exception Trapping, and Client Non-JSON Error Surfacing.
-- **Phase 21:** Bulletproof Private Key Sanitizer (`sanitizePrivateKey`) and Unified Multi-Format Credentials Resolver (`resolveServiceAccountCredentials`).
+- **Phase 21:** Bulletproof Private Key Sanitizer (`sanitizePrivateKey`) with Regex PEM Extraction and Unified Multi-Format Credentials Resolver (`resolveServiceAccountCredentials`). Pushed to `origin/main` (commit `1aff767`).
+- **Phase 22:** Resilient Master Spreadsheet Tab Auto-Discovery (`Users` vs `Authorized_Users`), Dynamic Column Mapping, and Automated Master Spreadsheet Provisioning Engine.
 
 ## Open Issues
-- None. Ready to push Phase 21 fix to remote repository upon user confirmation.
+- None. Ready for commit and deployment to Vercel.
 
 ## Next Direction
-- Request user permission to push commit `fix: robust private key sanitizer and multi-format credential resolver` to `origin/main`.
+- Request user authorization to commit and push Phase 22 changes to `origin/main`.
+
+

@@ -411,86 +411,367 @@ async function fetchTeamActivityLog(teamId, limit = 20) {
   }));
   return items.reverse().slice(0, limit);
 }
+var cachedMasterSheetTitles = null;
+var cachedUserSheetMeta = null;
+var cachedActivityTabName = null;
+var cachedConfigTabName = null;
+function invalidateMasterSheetCache() {
+  cachedMasterSheetTitles = null;
+  cachedUserSheetMeta = null;
+  cachedActivityTabName = null;
+  cachedConfigTabName = null;
+}
+async function ensureMasterSpreadsheetInitialized(spreadsheetId, customSheetsClient) {
+  const sheets = customSheetsClient || getGoogleSheetsClient();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const existingSheets = meta.data.sheets || [];
+  const sheetTitles = existingSheets.map((s) => s.properties?.title).filter(Boolean);
+  const requests = [];
+  const hasUserSheet = sheetTitles.includes("Users") || sheetTitles.includes("Authorized_Users");
+  const hasTeamOverview = sheetTitles.includes("Team_Overview");
+  const hasActivitySheet = sheetTitles.includes("Global_Activity") || sheetTitles.includes("Global_Activity_Log");
+  const hasConfigSheet = sheetTitles.includes("Configuration") || sheetTitles.includes("App_Config");
+  if (!hasUserSheet) {
+    requests.push({
+      addSheet: {
+        properties: {
+          title: "Users",
+          gridProperties: { rowCount: 100, columnCount: 10 }
+        }
+      }
+    });
+  }
+  if (!hasTeamOverview) {
+    requests.push({
+      addSheet: {
+        properties: {
+          title: "Team_Overview",
+          gridProperties: { rowCount: 100, columnCount: 13 }
+        }
+      }
+    });
+  }
+  if (!hasActivitySheet) {
+    requests.push({
+      addSheet: {
+        properties: {
+          title: "Global_Activity",
+          gridProperties: { rowCount: 100, columnCount: 6 }
+        }
+      }
+    });
+  }
+  if (!hasConfigSheet) {
+    requests.push({
+      addSheet: {
+        properties: {
+          title: "Configuration",
+          gridProperties: { rowCount: 50, columnCount: 5 }
+        }
+      }
+    });
+  }
+  if (requests.length > 0) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: { requests }
+    });
+  }
+  if (!hasUserSheet) {
+    const initialAdmin = (process.env.INITIAL_ADMIN_EMAIL || "").toLowerCase().trim();
+    const userHeaders = ["User ID", "Name", "Email", "Role", "Team ID", "Active", "Added By", "Added At", "Last Login"];
+    const initialValues = [userHeaders];
+    if (initialAdmin) {
+      initialValues.push([
+        "USR-ADMIN-001",
+        "System Administrator",
+        initialAdmin,
+        "admin",
+        "all",
+        "TRUE",
+        "System",
+        new Date().toISOString(),
+        ""
+      ]);
+    }
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: "'Users'!A1:I",
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: initialValues }
+    });
+  }
+  if (!hasTeamOverview) {
+    const teamHeaders = [
+      "Team ID",
+      "Team Name",
+      "Spreadsheet ID",
+      "Total Tasks",
+      "Completed Tasks",
+      "Pending Tasks",
+      "Completion %",
+      "Latest Pending Task",
+      "Last Updated",
+      "Status",
+      "Department",
+      "Head Email",
+      "Description"
+    ];
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: "'Team_Overview'!A1:M1",
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [teamHeaders] }
+    });
+  }
+  if (!hasActivitySheet) {
+    const activityHeaders = ["Activity ID", "Team ID", "Task ID", "Action", "User", "Timestamp"];
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: "'Global_Activity'!A1:F1",
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [activityHeaders] }
+    });
+  }
+  if (!hasConfigSheet) {
+    const configHeaders = ["Key", "Value (JSON)", "Description", "Last Updated", "Updated By"];
+    const now = new Date().toISOString();
+    const configRows = [
+      configHeaders,
+      ["dashboard_widgets", JSON.stringify(DEFAULT_APP_CONFIG.dashboardWidgets), "Widget toggles", now, "System"],
+      ["visible_team_fields", JSON.stringify(DEFAULT_APP_CONFIG.visibleTeamFields), "Columns", now, "System"],
+      ["categories", JSON.stringify(DEFAULT_APP_CONFIG.categories), "Categories", now, "System"],
+      ["app_settings", JSON.stringify(DEFAULT_APP_CONFIG.appSettings), "Branding", now, "System"]
+    ];
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: "'Configuration'!A1:E5",
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: configRows }
+    });
+  }
+  const updatedTitles = [
+    ...sheetTitles,
+    ...!hasUserSheet ? ["Users"] : [],
+    ...!hasTeamOverview ? ["Team_Overview"] : [],
+    ...!hasActivitySheet ? ["Global_Activity"] : [],
+    ...!hasConfigSheet ? ["Configuration"] : []
+  ];
+  cachedMasterSheetTitles = updatedTitles;
+  return updatedTitles;
+}
+async function resolveUserSheetMetadata(sheets, masterId) {
+  if (cachedUserSheetMeta) {
+    return cachedUserSheetMeta;
+  }
+  let sheetTitles = cachedMasterSheetTitles;
+  if (!sheetTitles) {
+    try {
+      const meta = await sheets.spreadsheets.get({ spreadsheetId: masterId });
+      sheetTitles = (meta.data.sheets || []).map((s) => s.properties?.title).filter(Boolean);
+      cachedMasterSheetTitles = sheetTitles;
+    } catch (err) {
+      console.warn("Could not read master spreadsheet metadata, attempting auto-provisioning:", err.message);
+      sheetTitles = await ensureMasterSpreadsheetInitialized(masterId, sheets);
+    }
+  }
+  let tabName = null;
+  if (sheetTitles.includes("Users")) {
+    tabName = "Users";
+  } else if (sheetTitles.includes("Authorized_Users")) {
+    tabName = "Authorized_Users";
+  }
+  if (!tabName) {
+    sheetTitles = await ensureMasterSpreadsheetInitialized(masterId, sheets);
+    tabName = "Users";
+  }
+  let headers = [];
+  try {
+    const headerRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: masterId,
+      range: `'${tabName}'!1:1`
+    });
+    headers = (headerRes.data.values?.[0] || []).map((h) => String(h).trim().toLowerCase());
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
+      sheetTitles = await ensureMasterSpreadsheetInitialized(masterId, sheets);
+      tabName = "Users";
+      const headerRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: masterId,
+        range: `'${tabName}'!1:1`
+      });
+      headers = (headerRes.data.values?.[0] || []).map((h) => String(h).trim().toLowerCase());
+    } else {
+      throw err;
+    }
+  }
+  const isAuthorizedUsersTab = tabName === "Authorized_Users";
+  const findCol = (predicate, fallback) => {
+    const idx = headers.findIndex(predicate);
+    return idx >= 0 ? idx : fallback;
+  };
+  const emailColIndex = findCol((h) => h.includes("email"), isAuthorizedUsersTab ? 0 : 2);
+  const nameColIndex = findCol((h) => h.includes("name"), 1);
+  const roleColIndex = findCol((h) => h.includes("role"), isAuthorizedUsersTab ? 2 : 3);
+  const teamIdColIndex = findCol((h) => h.includes("team"), isAuthorizedUsersTab ? 3 : 4);
+  const activeColIndex = findCol((h) => h.includes("active") || h.includes("status"), isAuthorizedUsersTab ? 4 : 5);
+  const idColIndex = headers.findIndex((h) => (h.includes("id") || h.includes("user")) && !h.includes("team"));
+  cachedUserSheetMeta = {
+    tabName,
+    emailColIndex,
+    nameColIndex,
+    roleColIndex,
+    teamIdColIndex,
+    activeColIndex,
+    idColIndex: idColIndex >= 0 ? idColIndex : isAuthorizedUsersTab ? -1 : 0
+  };
+  return cachedUserSheetMeta;
+}
+async function resolveGlobalActivityTabName(sheets, masterId) {
+  if (cachedActivityTabName)
+    return cachedActivityTabName;
+  let sheetTitles = cachedMasterSheetTitles;
+  if (!sheetTitles) {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: masterId });
+    sheetTitles = (meta.data.sheets || []).map((s) => s.properties?.title).filter(Boolean);
+    cachedMasterSheetTitles = sheetTitles;
+  }
+  if (sheetTitles.includes("Global_Activity")) {
+    cachedActivityTabName = "Global_Activity";
+  } else if (sheetTitles.includes("Global_Activity_Log")) {
+    cachedActivityTabName = "Global_Activity_Log";
+  } else {
+    await ensureMasterSpreadsheetInitialized(masterId, sheets);
+    cachedActivityTabName = "Global_Activity";
+  }
+  return cachedActivityTabName;
+}
+async function resolveConfigTabName(sheets, masterId) {
+  if (cachedConfigTabName)
+    return cachedConfigTabName;
+  let sheetTitles = cachedMasterSheetTitles;
+  if (!sheetTitles) {
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: masterId });
+    sheetTitles = (meta.data.sheets || []).map((s) => s.properties?.title).filter(Boolean);
+    cachedMasterSheetTitles = sheetTitles;
+  }
+  if (sheetTitles.includes("Configuration")) {
+    cachedConfigTabName = "Configuration";
+  } else if (sheetTitles.includes("App_Config")) {
+    cachedConfigTabName = "App_Config";
+  } else {
+    await ensureMasterSpreadsheetInitialized(masterId, sheets);
+    cachedConfigTabName = "Configuration";
+  }
+  return cachedConfigTabName;
+}
 async function fetchMasterTeamOverview() {
   const sheets = getGoogleSheetsClient();
   const masterId = getMasterSpreadsheetId();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: masterId,
-    range: "Team_Overview!A2:M"
-  });
-  const rows = response.data.values || [];
-  return rows.map((r) => {
-    const rawStatus = r[9] ? String(r[9]).trim() : "Active";
-    const status = ["Active", "Deactivated", "Archived"].includes(rawStatus) ? rawStatus : "Active";
-    return {
-      id: r[0] ? String(r[0]).trim() : "",
-      name: r[1] ? String(r[1]).trim() : "",
-      spreadsheetId: r[2] ? String(r[2]).trim() : "",
-      totalTasks: parseInt(String(r[3] || "0"), 10),
-      completedTasks: parseInt(String(r[4] || "0"), 10),
-      pendingTasks: parseInt(String(r[5] || "0"), 10),
-      completionPercentage: parseInt(String(r[6] || "0"), 10),
-      latestPendingTask: r[7] ? String(r[7]).trim() : "No tasks assigned yet.",
-      lastUpdated: r[8] ? String(r[8]).trim() : new Date().toISOString(),
-      status,
-      department: r[10] ? String(r[10]).trim() : void 0,
-      headEmail: r[11] ? String(r[11]).trim() : void 0,
-      description: r[12] ? String(r[12]).trim() : void 0
-    };
-  }).filter((t) => t.id);
+  const runFetch = async () => {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: masterId,
+      range: "'Team_Overview'!A2:M"
+    });
+    const rows = response.data.values || [];
+    return rows.map((r) => {
+      const rawStatus = r[9] ? String(r[9]).trim() : "Active";
+      const status = ["Active", "Deactivated", "Archived"].includes(rawStatus) ? rawStatus : "Active";
+      return {
+        id: r[0] ? String(r[0]).trim() : "",
+        name: r[1] ? String(r[1]).trim() : "",
+        spreadsheetId: r[2] ? String(r[2]).trim() : "",
+        totalTasks: parseInt(String(r[3] || "0"), 10),
+        completedTasks: parseInt(String(r[4] || "0"), 10),
+        pendingTasks: parseInt(String(r[5] || "0"), 10),
+        completionPercentage: parseInt(String(r[6] || "0"), 10),
+        latestPendingTask: r[7] ? String(r[7]).trim() : "No tasks assigned yet.",
+        lastUpdated: r[8] ? String(r[8]).trim() : new Date().toISOString(),
+        status,
+        department: r[10] ? String(r[10]).trim() : void 0,
+        headEmail: r[11] ? String(r[11]).trim() : void 0,
+        description: r[12] ? String(r[12]).trim() : void 0
+      };
+    }).filter((t) => t.id);
+  };
+  try {
+    return await runFetch();
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
+      console.warn("Team_Overview sheet not found, auto-provisioning master spreadsheet and retrying...");
+      invalidateMasterSheetCache();
+      await ensureMasterSpreadsheetInitialized(masterId);
+      return await runFetch();
+    }
+    throw err;
+  }
 }
 async function updateMasterTeamOverviewRow(teamOverview) {
   const sheets = getGoogleSheetsClient();
   const masterId = getMasterSpreadsheetId();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: masterId,
-    range: "Team_Overview!A:A"
-  });
-  const rows = response.data.values || [];
-  let targetRowIndex = -1;
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] && String(rows[i][0]).trim() === teamOverview.teamId) {
-      targetRowIndex = i + 1;
-      break;
+  const runUpdate = async () => {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: masterId,
+      range: "'Team_Overview'!A:A"
+    });
+    const rows = response.data.values || [];
+    let targetRowIndex = -1;
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][0] && String(rows[i][0]).trim() === teamOverview.teamId) {
+        targetRowIndex = i + 1;
+        break;
+      }
     }
-  }
-  const values = [
-    [
-      teamOverview.teamId,
-      teamOverview.teamName,
-      teamOverview.spreadsheetId,
-      teamOverview.totalTasks,
-      teamOverview.completedTasks,
-      teamOverview.pendingTasks,
-      teamOverview.completionPercentage,
-      teamOverview.latestPendingTask,
-      teamOverview.lastUpdated,
-      teamOverview.status || "Active",
-      teamOverview.department || "",
-      teamOverview.headEmail || "",
-      teamOverview.description || ""
-    ]
-  ];
-  if (targetRowIndex > 0) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: masterId,
-      range: `Team_Overview!A${targetRowIndex}:M${targetRowIndex}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values }
-    });
-  } else {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: masterId,
-      range: "Team_Overview!A:M",
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values }
-    });
+    const values = [
+      [
+        teamOverview.teamId,
+        teamOverview.teamName,
+        teamOverview.spreadsheetId,
+        teamOverview.totalTasks,
+        teamOverview.completedTasks,
+        teamOverview.pendingTasks,
+        teamOverview.completionPercentage,
+        teamOverview.latestPendingTask,
+        teamOverview.lastUpdated,
+        teamOverview.status || "Active",
+        teamOverview.department || "",
+        teamOverview.headEmail || "",
+        teamOverview.description || ""
+      ]
+    ];
+    if (targetRowIndex > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: masterId,
+        range: `'Team_Overview'!A${targetRowIndex}:M${targetRowIndex}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values }
+      });
+    } else {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: masterId,
+        range: "'Team_Overview'!A:M",
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values }
+      });
+    }
+  };
+  try {
+    await runUpdate();
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
+      invalidateMasterSheetCache();
+      await ensureMasterSpreadsheetInitialized(masterId);
+      await runUpdate();
+    } else {
+      throw err;
+    }
   }
 }
 async function appendGlobalActivityLog(item) {
   const sheets = getGoogleSheetsClient();
   const masterId = getMasterSpreadsheetId();
+  const tabName = await resolveGlobalActivityTabName(sheets, masterId);
   const values = [
     [
       item.id,
@@ -501,48 +782,103 @@ async function appendGlobalActivityLog(item) {
       item.timestamp
     ]
   ];
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: masterId,
-    range: "Global_Activity!A:F",
-    valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values }
-  });
+  try {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: masterId,
+      range: `'${tabName}'!A:F`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values }
+    });
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
+      invalidateMasterSheetCache();
+      await ensureMasterSpreadsheetInitialized(masterId);
+      const fallbackTab = await resolveGlobalActivityTabName(sheets, masterId);
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: masterId,
+        range: `'${fallbackTab}'!A:F`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values }
+      });
+    } else {
+      throw err;
+    }
+  }
 }
 async function fetchGlobalActivityLog(limit = 50) {
   const sheets = getGoogleSheetsClient();
   const masterId = getMasterSpreadsheetId();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: masterId,
-    range: "Global_Activity!A2:F"
-  });
-  const rows = response.data.values || [];
-  const items = rows.map((r, i) => ({
-    id: r[0] || `GACT-${i}`,
-    teamId: r[1] || "",
-    taskId: r[2] || "",
-    action: r[3] || "",
-    user: r[4] || "System",
-    timestamp: r[5] || new Date().toISOString()
-  }));
-  return items.reverse().slice(0, limit);
+  const tabName = await resolveGlobalActivityTabName(sheets, masterId);
+  try {
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: masterId,
+      range: `'${tabName}'!A2:F`
+    });
+    const rows = response.data.values || [];
+    const items = rows.map((r, i) => ({
+      id: r[0] || `GACT-${i}`,
+      teamId: r[1] || "",
+      taskId: r[2] || "",
+      action: r[3] || "",
+      user: r[4] || "System",
+      timestamp: r[5] || new Date().toISOString()
+    }));
+    return items.reverse().slice(0, limit);
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
+      console.warn("Global activity sheet not found, returning empty list:", err.message);
+      return [];
+    }
+    throw err;
+  }
 }
 async function fetchUsersList() {
   const sheets = getGoogleSheetsClient();
   const masterId = getMasterSpreadsheetId();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: masterId,
-    range: "Users!A2:F"
-  });
-  const rows = response.data.values || [];
-  return rows.map((r, i) => ({
-    id: r[0] ? String(r[0]).trim() : `USR-${i + 1}`,
-    name: r[1] ? String(r[1]).trim() : "",
-    email: r[2] ? String(r[2]).trim().toLowerCase() : "",
-    role: r[3] ? String(r[3]).trim().toLowerCase() : "viewer",
-    teamId: r[4] ? String(r[4]).trim() : "",
-    active: r[5] ? String(r[5]).trim().toUpperCase() === "TRUE" : true
-  })).filter((u) => u.email);
+  const runFetch = async () => {
+    const meta = await resolveUserSheetMetadata(sheets, masterId);
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: masterId,
+      range: `'${meta.tabName}'!A2:Z`
+    });
+    const rows = response.data.values || [];
+    return rows.map((r, i) => {
+      const email = r[meta.emailColIndex] ? String(r[meta.emailColIndex]).trim().toLowerCase() : "";
+      const name = r[meta.nameColIndex] ? String(r[meta.nameColIndex]).trim() : "";
+      const rawRole = r[meta.roleColIndex] ? String(r[meta.roleColIndex]).trim().toLowerCase() : "viewer";
+      const roleMap = {
+        admin: "admin",
+        administrator: "admin",
+        superadmin: "admin",
+        team_head: "team_head",
+        head: "team_head",
+        team_lead: "team_head",
+        lead: "team_head",
+        member: "team_head",
+        viewer: "viewer",
+        reader: "viewer"
+      };
+      const role = roleMap[rawRole] || "viewer";
+      const teamId = r[meta.teamIdColIndex] ? String(r[meta.teamIdColIndex]).trim() : "";
+      const rawActive = r[meta.activeColIndex] ? String(r[meta.activeColIndex]).trim().toUpperCase() : "TRUE";
+      const active = rawActive === "TRUE" || rawActive === "1";
+      const id = meta.idColIndex >= 0 && r[meta.idColIndex] ? String(r[meta.idColIndex]).trim() : `USR-${i + 1}`;
+      return { id, name, email, role, teamId, active };
+    }).filter((u) => u.email);
+  };
+  try {
+    return await runFetch();
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
+      console.warn("Users sheet not found, auto-provisioning master spreadsheet and retrying...");
+      invalidateMasterSheetCache();
+      await ensureMasterSpreadsheetInitialized(masterId);
+      return await runFetch();
+    }
+    throw err;
+  }
 }
 async function findUserByEmail(email) {
   const users = await fetchUsersList();
@@ -552,66 +888,105 @@ async function findUserByEmail(email) {
 async function upsertUser(user) {
   const sheets = getGoogleSheetsClient();
   const masterId = getMasterSpreadsheetId();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: masterId,
-    range: "Users!C:C"
-  });
-  const rows = response.data.values || [];
-  let targetRowIndex = -1;
-  for (let i = 1; i < rows.length; i++) {
-    if (rows[i][0] && String(rows[i][0]).trim().toLowerCase() === user.email.toLowerCase()) {
-      targetRowIndex = i + 1;
-      break;
+  const runUpsert = async () => {
+    const meta = await resolveUserSheetMetadata(sheets, masterId);
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: masterId,
+      range: `'${meta.tabName}'!A:Z`
+    });
+    const allRows = response.data.values || [];
+    let targetRowIndex = -1;
+    for (let i = 1; i < allRows.length; i++) {
+      const row = allRows[i];
+      const rowEmail = row[meta.emailColIndex] ? String(row[meta.emailColIndex]).trim().toLowerCase() : "";
+      if (rowEmail === user.email.toLowerCase()) {
+        targetRowIndex = i + 1;
+        break;
+      }
     }
-  }
-  const values = [
-    [
-      user.id,
-      user.name,
-      user.email.toLowerCase(),
-      user.role,
-      user.teamId,
-      user.active ? "TRUE" : "FALSE"
-    ]
-  ];
-  if (targetRowIndex > 0) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: masterId,
-      range: `Users!A${targetRowIndex}:F${targetRowIndex}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values }
-    });
-  } else {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: masterId,
-      range: "Users!A:F",
-      valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values }
-    });
+    const existingRow = targetRowIndex > 0 ? allRows[targetRowIndex - 1] || [] : [];
+    const maxCol = Math.max(meta.emailColIndex, meta.nameColIndex, meta.roleColIndex, meta.teamIdColIndex, meta.activeColIndex, meta.idColIndex, existingRow.length - 1, 5);
+    const rowValues = new Array(maxCol + 1).fill("");
+    for (let c = 0; c < existingRow.length; c++) {
+      rowValues[c] = existingRow[c] || "";
+    }
+    if (meta.idColIndex >= 0)
+      rowValues[meta.idColIndex] = user.id;
+    rowValues[meta.nameColIndex] = user.name;
+    rowValues[meta.emailColIndex] = user.email.toLowerCase();
+    rowValues[meta.roleColIndex] = user.role;
+    rowValues[meta.teamIdColIndex] = user.teamId;
+    rowValues[meta.activeColIndex] = user.active ? "TRUE" : "FALSE";
+    if (targetRowIndex > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: masterId,
+        range: `'${meta.tabName}'!A${targetRowIndex}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [rowValues] }
+      });
+    } else {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: masterId,
+        range: `'${meta.tabName}'!A:A`,
+        valueInputOption: "USER_ENTERED",
+        insertDataOption: "INSERT_ROWS",
+        requestBody: { values: [rowValues] }
+      });
+    }
+  };
+  try {
+    await runUpsert();
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
+      console.warn("Users sheet not found during upsert, auto-provisioning and retrying...");
+      invalidateMasterSheetCache();
+      await ensureMasterSpreadsheetInitialized(masterId);
+      await runUpsert();
+    } else {
+      throw err;
+    }
   }
 }
 async function deleteUser(email) {
   const sheets = getGoogleSheetsClient();
   const masterId = getMasterSpreadsheetId();
   const normalized = email.trim().toLowerCase();
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: masterId,
-    range: "Users!A2:F"
-  });
-  const rows = response.data.values || [];
-  const remainingRows = rows.filter((r) => r[2] && String(r[2]).trim().toLowerCase() !== normalized);
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId: masterId,
-    range: "Users!A2:F"
-  });
-  if (remainingRows.length > 0) {
-    await sheets.spreadsheets.values.update({
+  const runDelete = async () => {
+    const meta = await resolveUserSheetMetadata(sheets, masterId);
+    const response = await sheets.spreadsheets.values.get({
       spreadsheetId: masterId,
-      range: `Users!A2:F${remainingRows.length + 1}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: remainingRows }
+      range: `'${meta.tabName}'!A:Z`
     });
+    const allRows = response.data.values || [];
+    if (allRows.length <= 1)
+      return;
+    const remainingRows = allRows.slice(1).filter((r) => {
+      const rowEmail = r[meta.emailColIndex] ? String(r[meta.emailColIndex]).trim().toLowerCase() : "";
+      return rowEmail !== normalized;
+    });
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: masterId,
+      range: `'${meta.tabName}'!A2:Z`
+    });
+    if (remainingRows.length > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: masterId,
+        range: `'${meta.tabName}'!A2`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: remainingRows }
+      });
+    }
+  };
+  try {
+    await runDelete();
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
+      invalidateMasterSheetCache();
+      await ensureMasterSpreadsheetInitialized(masterId);
+      await runDelete();
+    } else {
+      throw err;
+    }
   }
 }
 var DEFAULT_APP_CONFIG = {
@@ -635,9 +1010,10 @@ async function fetchAppConfig() {
   try {
     const sheets = getGoogleSheetsClient();
     const masterId = getMasterSpreadsheetId();
+    const tabName = await resolveConfigTabName(sheets, masterId);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: masterId,
-      range: "Configuration!A2:E"
+      range: `'${tabName}'!A2:E`
     });
     const rows = response.data.values || [];
     if (rows.length === 0) {
@@ -698,6 +1074,7 @@ async function saveAppConfig(updatedConfig, userEmail) {
   };
   const sheets = getGoogleSheetsClient();
   const masterId = getMasterSpreadsheetId();
+  const tabName = await resolveConfigTabName(sheets, masterId);
   const entries = [
     {
       key: "dashboard_widgets",
@@ -730,27 +1107,18 @@ async function saveAppConfig(updatedConfig, userEmail) {
   try {
     await sheets.spreadsheets.values.update({
       spreadsheetId: masterId,
-      range: "Configuration!A2:E5",
+      range: `'${tabName}'!A2:E5`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values }
     });
   } catch (err) {
     if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found")) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: masterId,
-        requestBody: {
-          requests: [
-            {
-              addSheet: {
-                properties: { title: "Configuration" }
-              }
-            }
-          ]
-        }
-      });
+      invalidateMasterSheetCache();
+      await ensureMasterSpreadsheetInitialized(masterId);
+      const fallbackTab = await resolveConfigTabName(sheets, masterId);
       await sheets.spreadsheets.values.update({
         spreadsheetId: masterId,
-        range: "Configuration!A1:E5",
+        range: `'${fallbackTab}'!A1:E5`,
         valueInputOption: "USER_ENTERED",
         requestBody: {
           values: [
