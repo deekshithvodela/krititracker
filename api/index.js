@@ -109,26 +109,160 @@ function getMasterSpreadsheetId() {
   }
   return id;
 }
+function parseTeamSpreadsheetIdsJson(rawKey) {
+  if (!rawKey)
+    return {};
+  let clean = rawKey.trim();
+  try {
+    const directParsed = JSON.parse(clean);
+    if (directParsed && typeof directParsed === "object" && !Array.isArray(directParsed)) {
+      const result2 = {};
+      for (const [k, v] of Object.entries(directParsed)) {
+        if (k && v && typeof v === "string") {
+          result2[k.trim()] = v.trim();
+        }
+      }
+      return result2;
+    }
+    if (typeof directParsed === "string") {
+      return parseTeamSpreadsheetIdsJson(directParsed);
+    }
+  } catch (_e) {
+  }
+  if (clean.startsWith("```")) {
+    clean = clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  }
+  if (clean.startsWith('"') && clean.endsWith('"') || clean.startsWith("'") && clean.endsWith("'")) {
+    clean = clean.slice(1, -1).trim();
+  }
+  clean = clean.replace(/\\r/g, "\r").replace(/\\n/g, "\n").replace(/\\t/g, "	").replace(/\\"/g, '"').replace(/\\'/g, "'");
+  if (clean.startsWith("```")) {
+    clean = clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  }
+  clean = clean.replace(/,\s*([}\]])/g, "$1");
+  try {
+    const parsed = JSON.parse(clean);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      if (typeof parsed === "string") {
+        return parseTeamSpreadsheetIdsJson(parsed);
+      }
+      const result2 = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (k && v && typeof v === "string") {
+          result2[k.trim()] = v.trim();
+        }
+      }
+      return result2;
+    }
+  } catch (_e) {
+    try {
+      const relaxed = clean.replace(/'/g, '"').replace(/,\s*([}\]])/g, "$1");
+      const parsed = JSON.parse(relaxed);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const result2 = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          if (k && v && typeof v === "string") {
+            result2[k.trim()] = v.trim();
+          }
+        }
+        return result2;
+      }
+    } catch (_e2) {
+    }
+  }
+  const regex = /["']?\\*["']?([a-zA-Z0-9_-]+)["']?\\*["']?\s*:\s*["']?\\*["']?([a-zA-Z0-9_-]+)["']?\\*["']?/g;
+  const result = {};
+  let match;
+  while ((match = regex.exec(clean)) !== null) {
+    const key = match[1]?.trim();
+    const val = match[2]?.trim();
+    if (key && val) {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+var STANDARD_COMMITTEE_METADATA = {
+  "team-01": {
+    name: "Team 01 - Scientific Committee & Medical Abstracts",
+    department: "Academic & Clinical Affairs",
+    description: "Abstract reviews, clinical tracks, symposia selection, and journal publication coordination"
+  },
+  "team-02": {
+    name: "Team 02 - Clinical Workshops & CME Accreditation",
+    department: "Continuing Medical Education",
+    description: "Hands-on clinical stations, ultrasound simulations, and medical council credit hours"
+  },
+  "team-03": {
+    name: "Team 03 - Keynote Speakers & Faculty Coordination",
+    department: "Faculty Relations",
+    description: "International keynote professors, speaker honorarium, and preview green rooms"
+  },
+  "team-04": {
+    name: "Team 04 - Surgical Wet-Labs & Simulators",
+    department: "Surgical Training",
+    description: "Laparoscopic simulators, robotic surgery console stations, and cadaver tissue handling"
+  },
+  "team-05": {
+    name: "Team 05 - Medical Exhibition & Pharma Sponsors",
+    department: "Industry Partnerships",
+    description: "Pharmaceutical pavilions, medical technology demo booths, and sponsorship logistics"
+  },
+  "team-06": {
+    name: "Team 06 - Delegate Registration & Health Badging",
+    department: "Delegate Services",
+    description: "RFID physician delegate badges, on-site check-in kiosks, and welcome kits"
+  },
+  "team-07": {
+    name: "Team 07 - Audio-Visual, Telemedicine & Live Surgery Broadcast",
+    department: "Medical Broadcast",
+    description: "4K surgical video feeds, live telemedicine operating theatre broadcast, and plenary audio sync"
+  },
+  "team-08": {
+    name: "Team 08 - Hospitality, VIP Doctors & Travel Logistics",
+    department: "Hospitality & VIP Concierge",
+    description: "Airport doctor concierge, presidential suite bookings, and dedicated executive shuttles"
+  },
+  "team-09": {
+    name: "Team 09 - Emergency Medical Protocol & First Aid Ops",
+    department: "Emergency Medicine & Safety",
+    description: "Onsite emergency triage station, automated defibrillators (AED), and hospital trauma dispatch"
+  },
+  "team-10": {
+    name: "Team 10 - Medical Press, Media & Journal Publications",
+    department: "Communications & Media",
+    description: "Medical journalism briefings, clinical trial press releases, and symposium media embargoes"
+  },
+  "team-11": {
+    name: "Team 11 - Venue Facilities, Bio-Hazard & Infection Control",
+    department: "Facility & Biosafety Operations",
+    description: "HEPA filtration monitoring, biomedical waste disposal, and infection control cycles"
+  },
+  "team-12": {
+    name: "Team 12 - Compliance, Ethics Board & Medical Regulatory",
+    department: "Regulatory & Ethics",
+    description: "Clinical trial registrations, medical malpractice indemnity, and IRB ethics clearances"
+  }
+};
 function getTeamSpreadsheetMap() {
   const envMap = process.env.TEAM_SPREADSHEET_IDS;
-  if (!envMap) {
-    const map = {};
-    for (let i = 1; i <= 12; i++) {
-      const pad = String(i).padStart(2, "0");
-      const teamKey = `team-${pad}`;
-      const envKey = `TEAM_${pad}_SPREADSHEET_ID`;
-      if (process.env[envKey]) {
-        map[teamKey] = process.env[envKey];
-      }
+  let map = {};
+  if (envMap) {
+    try {
+      map = parseTeamSpreadsheetIdsJson(envMap);
+    } catch (err) {
+      console.warn("Failed to parse TEAM_SPREADSHEET_IDS, attempting fallback...", err);
     }
-    return map;
   }
-  try {
-    return JSON.parse(envMap);
-  } catch (err) {
-    console.error("Failed to parse TEAM_SPREADSHEET_IDS JSON:", err);
-    throw new Error("Invalid TEAM_SPREADSHEET_IDS JSON format.");
+  for (let i = 1; i <= 12; i++) {
+    const pad = String(i).padStart(2, "0");
+    const teamKey = `team-${pad}`;
+    const envKey = `TEAM_${pad}_SPREADSHEET_ID`;
+    if (process.env[envKey] && !map[teamKey]) {
+      map[teamKey] = process.env[envKey];
+    }
   }
+  return map;
 }
 async function getTeamSpreadsheetId(teamId) {
   const map = getTeamSpreadsheetMap();
@@ -330,45 +464,71 @@ async function appendTaskRow(teamId, task) {
       task.isMandatory !== false ? "TRUE" : "FALSE"
     ]
   ];
-  await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range: "Tasks!A:N",
-    valueInputOption: "USER_ENTERED",
-    insertDataOption: "INSERT_ROWS",
-    requestBody: { values }
-  });
+  const runAppend = async () => {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: "Tasks!A:N",
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values }
+    });
+  };
+  try {
+    await runAppend();
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found") || err?.code === 400) {
+      console.warn(`Team spreadsheet ${spreadsheetId} missing Tasks tab, auto-provisioning and retrying append...`);
+      await ensureTeamSpreadsheetInitialized(spreadsheetId);
+      await runAppend();
+      return;
+    }
+    throw err;
+  }
 }
 async function batchUpdateTaskRows(teamId, tasks) {
   const sheets = getGoogleSheetsClient();
   const spreadsheetId = await getTeamSpreadsheetId(teamId);
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId,
-    range: "Tasks!A2:N"
-  });
-  if (tasks.length === 0)
-    return;
-  const values = tasks.map((task) => [
-    task.id,
-    task.title,
-    task.description,
-    task.assignedTo || "",
-    task.priority,
-    task.deadline,
-    task.status,
-    task.remarks || "",
-    task.displayOrder,
-    task.createdAt,
-    task.updatedAt,
-    task.completedAt || "",
-    task.category || "General",
-    task.isMandatory !== false ? "TRUE" : "FALSE"
-  ]);
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `Tasks!A2:N${tasks.length + 1}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values }
-  });
+  const runUpdate = async () => {
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: "Tasks!A2:N"
+    });
+    if (tasks.length === 0)
+      return;
+    const values = tasks.map((task) => [
+      task.id,
+      task.title,
+      task.description,
+      task.assignedTo || "",
+      task.priority,
+      task.deadline,
+      task.status,
+      task.remarks || "",
+      task.displayOrder,
+      task.createdAt,
+      task.updatedAt,
+      task.completedAt || "",
+      task.category || "General",
+      task.isMandatory !== false ? "TRUE" : "FALSE"
+    ]);
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `Tasks!A2:N${tasks.length + 1}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values }
+    });
+  };
+  try {
+    await runUpdate();
+  } catch (err) {
+    if (err?.message?.includes("Unable to parse range") || err?.message?.includes("not found") || err?.code === 400) {
+      console.warn(`Team spreadsheet ${spreadsheetId} missing Tasks tab, auto-provisioning and retrying update...`);
+      await ensureTeamSpreadsheetInitialized(spreadsheetId);
+      await runUpdate();
+      return;
+    }
+    throw err;
+  }
 }
 async function appendTeamActivityLog(teamId, item) {
   const sheets = getGoogleSheetsClient();
@@ -674,7 +834,7 @@ async function fetchMasterTeamOverview() {
       range: "'Team_Overview'!A2:M"
     });
     const rows = response.data.values || [];
-    return rows.map((r) => {
+    const existingTeams = rows.map((r) => {
       const rawStatus = r[9] ? String(r[9]).trim() : "Active";
       const status = ["Active", "Deactivated", "Archived"].includes(rawStatus) ? rawStatus : "Active";
       return {
@@ -693,6 +853,65 @@ async function fetchMasterTeamOverview() {
         description: r[12] ? String(r[12]).trim() : void 0
       };
     }).filter((t) => t.id);
+    const spreadsheetMap = getTeamSpreadsheetMap();
+    const existingTeamIds = new Set(existingTeams.map((t) => t.id.toLowerCase()));
+    const missingTeamEntries = Object.entries(spreadsheetMap).filter(([id]) => !existingTeamIds.has(id.toLowerCase()));
+    if (missingTeamEntries.length > 0) {
+      const nowIso = new Date().toISOString();
+      const rowsToAppend = [];
+      const newlyAddedTeams = [];
+      for (const [teamId, sheetId] of missingTeamEntries) {
+        const meta = STANDARD_COMMITTEE_METADATA[teamId] || {
+          name: `Team ${teamId.replace("team-", "")} Committee`,
+          department: "Operations",
+          description: `Operations and checklist coordination for ${teamId}`
+        };
+        const newTeam = {
+          id: teamId,
+          name: meta.name,
+          spreadsheetId: sheetId,
+          totalTasks: 0,
+          completedTasks: 0,
+          pendingTasks: 0,
+          completionPercentage: 0,
+          latestPendingTask: "No tasks assigned yet.",
+          lastUpdated: nowIso,
+          status: "Active",
+          department: meta.department,
+          headEmail: void 0,
+          description: meta.description
+        };
+        newlyAddedTeams.push(newTeam);
+        rowsToAppend.push([
+          teamId,
+          meta.name,
+          sheetId,
+          "0",
+          "0",
+          "0",
+          "0",
+          "No tasks assigned yet.",
+          nowIso,
+          "Active",
+          meta.department,
+          "",
+          meta.description
+        ]);
+      }
+      try {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: masterId,
+          range: "'Team_Overview'!A:M",
+          valueInputOption: "USER_ENTERED",
+          requestBody: { values: rowsToAppend }
+        });
+        existingTeams.push(...newlyAddedTeams);
+      } catch (appendErr) {
+        console.warn("Could not persist auto-populated teams to Master Sheet Team_Overview:", appendErr);
+        existingTeams.push(...newlyAddedTeams);
+      }
+    }
+    return existingTeams;
   };
   try {
     return await runFetch();
@@ -2240,7 +2459,6 @@ async function handler15(req, res) {
   }
   try {
     const user = await authenticateSession(req);
-    enforceAdmin(user);
     if (!validateCsrfToken(req)) {
       return res.status(403).json({ success: false, error: "Invalid or missing CSRF token." });
     }
@@ -2249,6 +2467,7 @@ async function handler15(req, res) {
     if (!teamId) {
       return res.status(400).json({ success: false, error: "teamId is required to create a task." });
     }
+    enforceWriteAccess(user, teamId);
     const taskData = validateTaskInput(body);
     const existingTasks = await fetchTeamTasks(teamId);
     const now = new Date().toISOString();
@@ -2297,7 +2516,6 @@ async function handler16(req, res) {
   }
   try {
     const user = await authenticateSession(req);
-    enforceAdmin(user);
     if (!validateCsrfToken(req)) {
       return res.status(403).json({ success: false, error: "Invalid or missing CSRF token." });
     }
@@ -2307,6 +2525,7 @@ async function handler16(req, res) {
     if (!teamId || orderedTaskIds.length === 0) {
       return res.status(400).json({ success: false, error: "teamId and orderedTaskIds array are required." });
     }
+    enforceWriteAccess(user, teamId);
     const existingTasks = await fetchTeamTasks(teamId);
     const taskMap = /* @__PURE__ */ new Map();
     existingTasks.forEach((t) => taskMap.set(t.id, t));
@@ -2358,7 +2577,6 @@ async function handler17(req, res) {
   }
   try {
     const user = await authenticateSession(req);
-    enforceAdmin(user);
     if (!validateCsrfToken(req)) {
       return res.status(403).json({ success: false, error: "Invalid or missing CSRF token." });
     }
@@ -2368,6 +2586,7 @@ async function handler17(req, res) {
     if (!taskId || !teamId) {
       return res.status(400).json({ success: false, error: "taskId and teamId parameters are required." });
     }
+    enforceWriteAccess(user, teamId);
     const tasks = await fetchTeamTasks(teamId);
     const existingIndex = tasks.findIndex((t) => t.id === taskId);
     if (existingIndex === -1) {

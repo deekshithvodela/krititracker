@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { authenticateSession, enforceAdmin } from '../../_lib/auth';
+import { authenticateSession, enforceWriteAccess } from '../../_lib/auth';
 import { validateCsrfToken } from '../../_lib/csrf';
 import { parseJsonBody, validateTaskInput } from '../../_lib/validation';
 import { fetchTeamTasks, findTaskRowIndex, updateTaskRow, batchUpdateTaskRows } from '../../_lib/sheets';
@@ -14,7 +14,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const user = await authenticateSession(req);
-    enforceAdmin(user); // Super Admin only for full edit/delete
 
     if (!validateCsrfToken(req)) {
       return res.status(403).json({ success: false, error: 'Invalid or missing CSRF token.' });
@@ -27,6 +26,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!taskId || !teamId) {
       return res.status(400).json({ success: false, error: 'taskId and teamId parameters are required.' });
     }
+
+    // RBAC: Verify write access to this team (Super Admin or assigned Team Head; Viewers rejected)
+    enforceWriteAccess(user, teamId);
 
     const tasks = await fetchTeamTasks(teamId);
     const existingIndex = tasks.findIndex(t => t.id === taskId);

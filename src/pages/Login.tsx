@@ -26,8 +26,14 @@ export const Login: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      await login(credentialResponse.credential);
-      navigate('/admin');
+      const authUser = await login(credentialResponse.credential);
+      if (authUser.role === 'admin') {
+        navigate('/admin');
+      } else if (authUser.teamId && authUser.teamId !== 'all') {
+        navigate(`/teams/${authUser.teamId}`);
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.message || 'Access Denied: Your account is not authorized.');
     } finally {

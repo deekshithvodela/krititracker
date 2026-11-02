@@ -147,27 +147,198 @@ export function getMasterSpreadsheetId(): string {
   return id;
 }
 
-export function getTeamSpreadsheetMap(): Record<string, string> {
-  const envMap = process.env.TEAM_SPREADSHEET_IDS;
-  if (!envMap) {
-    const map: Record<string, string> = {};
-    for (let i = 1; i <= 12; i++) {
-      const pad = String(i).padStart(2, '0');
-      const teamKey = `team-${pad}`;
-      const envKey = `TEAM_${pad}_SPREADSHEET_ID`;
-      if (process.env[envKey]) {
-        map[teamKey] = process.env[envKey]!;
+/**
+ * Resilient JSON parser for TEAM_SPREADSHEET_IDS environment variable.
+ * Handles markdown code fences, surrounding quotes, escaped newlines, trailing commas,
+ * and falls back to regex key-value extraction without throwing unhandled errors.
+ */
+export function parseTeamSpreadsheetIdsJson(rawKey: string | undefined): Record<string, string> {
+  if (!rawKey) return {};
+
+  let clean = rawKey.trim();
+
+  // Try direct JSON.parse first (in case it is already valid JSON without any modifications)
+  try {
+    const directParsed = JSON.parse(clean);
+    if (directParsed && typeof directParsed === 'object' && !Array.isArray(directParsed)) {
+      const result: Record<string, string> = {};
+      for (const [k, v] of Object.entries(directParsed)) {
+        if (k && v && typeof v === 'string') {
+          result[k.trim()] = v.trim();
+        }
       }
+      return result;
     }
-    return map;
+    if (typeof directParsed === 'string') {
+      return parseTeamSpreadsheetIdsJson(directParsed);
+    }
+  } catch (_e) {
+    // Continue with sanitization
   }
 
-  try {
-    return JSON.parse(envMap);
-  } catch (err) {
-    console.error('Failed to parse TEAM_SPREADSHEET_IDS JSON:', err);
-    throw new Error('Invalid TEAM_SPREADSHEET_IDS JSON format.');
+  // Strip markdown code fences (```json ... ``` or ``` ... ```)
+  if (clean.startsWith('```')) {
+    clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   }
+
+  // Strip surrounding outer quotes if string was wrapped in quotes
+  if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+    clean = clean.slice(1, -1).trim();
+  }
+
+  // Handle double-escaped newlines, tabs, and quotes
+  clean = clean
+    .replace(/\\r/g, '\r')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'");
+
+  // If after unescaping newlines it has markdown fences inside:
+  if (clean.startsWith('```')) {
+    clean = clean.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  }
+
+  // Remove trailing commas before closing braces/brackets
+  clean = clean.replace(/,\s*([}\]])/g, '$1');
+
+  // Attempt standard JSON.parse after cleaning
+  try {
+    const parsed = JSON.parse(clean);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      if (typeof parsed === 'string') {
+        return parseTeamSpreadsheetIdsJson(parsed);
+      }
+      const result: Record<string, string> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        if (k && v && typeof v === 'string') {
+          result[k.trim()] = v.trim();
+        }
+      }
+      return result;
+    }
+  } catch (_e) {
+    // If standard JSON.parse fails, try relaxing single quotes to double quotes
+    try {
+      const relaxed = clean
+        .replace(/'/g, '"')
+        .replace(/,\s*([}\]])/g, '$1');
+      const parsed = JSON.parse(relaxed);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const result: Record<string, string> = {};
+        for (const [k, v] of Object.entries(parsed)) {
+          if (k && v && typeof v === 'string') {
+            result[k.trim()] = v.trim();
+          }
+        }
+        return result;
+      }
+    } catch (_e2) {
+      // Fall through to regex extraction
+    }
+  }
+
+  // Regex fallback: extract key-value pairs matching "key": "value"
+  const regex = /["']?\\*["']?([a-zA-Z0-9_-]+)["']?\\*["']?\s*:\s*["']?\\*["']?([a-zA-Z0-9_-]+)["']?\\*["']?/g;
+  const result: Record<string, string> = {};
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(clean)) !== null) {
+    const key = match[1]?.trim();
+    const val = match[2]?.trim();
+    if (key && val) {
+      result[key] = val;
+    }
+  }
+
+  return result;
+}
+
+export const STANDARD_COMMITTEE_METADATA: Record<string, { name: string; department: string; description: string }> = {
+  'team-01': {
+    name: 'Team 01 - Scientific Committee & Medical Abstracts',
+    department: 'Academic & Clinical Affairs',
+    description: 'Abstract reviews, clinical tracks, symposia selection, and journal publication coordination',
+  },
+  'team-02': {
+    name: 'Team 02 - Clinical Workshops & CME Accreditation',
+    department: 'Continuing Medical Education',
+    description: 'Hands-on clinical stations, ultrasound simulations, and medical council credit hours',
+  },
+  'team-03': {
+    name: 'Team 03 - Keynote Speakers & Faculty Coordination',
+    department: 'Faculty Relations',
+    description: 'International keynote professors, speaker honorarium, and preview green rooms',
+  },
+  'team-04': {
+    name: 'Team 04 - Surgical Wet-Labs & Simulators',
+    department: 'Surgical Training',
+    description: 'Laparoscopic simulators, robotic surgery console stations, and cadaver tissue handling',
+  },
+  'team-05': {
+    name: 'Team 05 - Medical Exhibition & Pharma Sponsors',
+    department: 'Industry Partnerships',
+    description: 'Pharmaceutical pavilions, medical technology demo booths, and sponsorship logistics',
+  },
+  'team-06': {
+    name: 'Team 06 - Delegate Registration & Health Badging',
+    department: 'Delegate Services',
+    description: 'RFID physician delegate badges, on-site check-in kiosks, and welcome kits',
+  },
+  'team-07': {
+    name: 'Team 07 - Audio-Visual, Telemedicine & Live Surgery Broadcast',
+    department: 'Medical Broadcast',
+    description: '4K surgical video feeds, live telemedicine operating theatre broadcast, and plenary audio sync',
+  },
+  'team-08': {
+    name: 'Team 08 - Hospitality, VIP Doctors & Travel Logistics',
+    department: 'Hospitality & VIP Concierge',
+    description: 'Airport doctor concierge, presidential suite bookings, and dedicated executive shuttles',
+  },
+  'team-09': {
+    name: 'Team 09 - Emergency Medical Protocol & First Aid Ops',
+    department: 'Emergency Medicine & Safety',
+    description: 'Onsite emergency triage station, automated defibrillators (AED), and hospital trauma dispatch',
+  },
+  'team-10': {
+    name: 'Team 10 - Medical Press, Media & Journal Publications',
+    department: 'Communications & Media',
+    description: 'Medical journalism briefings, clinical trial press releases, and symposium media embargoes',
+  },
+  'team-11': {
+    name: 'Team 11 - Venue Facilities, Bio-Hazard & Infection Control',
+    department: 'Facility & Biosafety Operations',
+    description: 'HEPA filtration monitoring, biomedical waste disposal, and infection control cycles',
+  },
+  'team-12': {
+    name: 'Team 12 - Compliance, Ethics Board & Medical Regulatory',
+    department: 'Regulatory & Ethics',
+    description: 'Clinical trial registrations, medical malpractice indemnity, and IRB ethics clearances',
+  },
+};
+
+export function getTeamSpreadsheetMap(): Record<string, string> {
+  const envMap = process.env.TEAM_SPREADSHEET_IDS;
+  let map: Record<string, string> = {};
+
+  if (envMap) {
+    try {
+      map = parseTeamSpreadsheetIdsJson(envMap);
+    } catch (err) {
+      console.warn('Failed to parse TEAM_SPREADSHEET_IDS, attempting fallback...', err);
+    }
+  }
+
+  // Always merge individual TEAM_XX_SPREADSHEET_ID variables as fallbacks or additions
+  for (let i = 1; i <= 12; i++) {
+    const pad = String(i).padStart(2, '0');
+    const teamKey = `team-${pad}`;
+    const envKey = `TEAM_${pad}_SPREADSHEET_ID`;
+    if (process.env[envKey] && !map[teamKey]) {
+      map[teamKey] = process.env[envKey]!;
+    }
+  }
+
+  return map;
 }
 
 export async function getTeamSpreadsheetId(teamId: string): Promise<string> {
@@ -403,49 +574,77 @@ export async function appendTaskRow(teamId: string, task: Task): Promise<void> {
     ],
   ];
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range: 'Tasks!A:N',
-    valueInputOption: 'USER_ENTERED',
-    insertDataOption: 'INSERT_ROWS',
-    requestBody: { values },
-  });
+  const runAppend = async () => {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: 'Tasks!A:N',
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values },
+    });
+  };
+
+  try {
+    await runAppend();
+  } catch (err: any) {
+    if (err?.message?.includes('Unable to parse range') || err?.message?.includes('not found') || err?.code === 400) {
+      console.warn(`Team spreadsheet ${spreadsheetId} missing Tasks tab, auto-provisioning and retrying append...`);
+      await ensureTeamSpreadsheetInitialized(spreadsheetId);
+      await runAppend();
+      return;
+    }
+    throw err;
+  }
 }
 
 export async function batchUpdateTaskRows(teamId: string, tasks: Task[]): Promise<void> {
   const sheets = getGoogleSheetsClient();
   const spreadsheetId = await getTeamSpreadsheetId(teamId);
 
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId,
-    range: 'Tasks!A2:N',
-  });
+  const runUpdate = async () => {
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: 'Tasks!A2:N',
+    });
 
-  if (tasks.length === 0) return;
+    if (tasks.length === 0) return;
 
-  const values = tasks.map(task => [
-    task.id,
-    task.title,
-    task.description,
-    task.assignedTo || '',
-    task.priority,
-    task.deadline,
-    task.status,
-    task.remarks || '',
-    task.displayOrder,
-    task.createdAt,
-    task.updatedAt,
-    task.completedAt || '',
-    task.category || 'General',
-    task.isMandatory !== false ? 'TRUE' : 'FALSE',
-  ]);
+    const values = tasks.map(task => [
+      task.id,
+      task.title,
+      task.description,
+      task.assignedTo || '',
+      task.priority,
+      task.deadline,
+      task.status,
+      task.remarks || '',
+      task.displayOrder,
+      task.createdAt,
+      task.updatedAt,
+      task.completedAt || '',
+      task.category || 'General',
+      task.isMandatory !== false ? 'TRUE' : 'FALSE',
+    ]);
 
-  await sheets.spreadsheets.values.update({
-    spreadsheetId,
-    range: `Tasks!A2:N${tasks.length + 1}`,
-    valueInputOption: 'USER_ENTERED',
-    requestBody: { values },
-  });
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `Tasks!A2:N${tasks.length + 1}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values },
+    });
+  };
+
+  try {
+    await runUpdate();
+  } catch (err: any) {
+    if (err?.message?.includes('Unable to parse range') || err?.message?.includes('not found') || err?.code === 400) {
+      console.warn(`Team spreadsheet ${spreadsheetId} missing Tasks tab, auto-provisioning and retrying update...`);
+      await ensureTeamSpreadsheetInitialized(spreadsheetId);
+      await runUpdate();
+      return;
+    }
+    throw err;
+  }
 }
 
 export async function appendTeamActivityLog(teamId: string, item: ActivityLogItem): Promise<void> {
@@ -817,7 +1016,7 @@ export async function fetchMasterTeamOverview(): Promise<TeamOverview[]> {
     });
 
     const rows = response.data.values || [];
-    return rows.map(r => {
+    const existingTeams: TeamOverview[] = rows.map(r => {
       const rawStatus = r[9] ? String(r[9]).trim() : 'Active';
       const status: TeamStatus = (['Active', 'Deactivated', 'Archived'].includes(rawStatus) ? rawStatus : 'Active') as TeamStatus;
 
@@ -837,6 +1036,73 @@ export async function fetchMasterTeamOverview(): Promise<TeamOverview[]> {
         description: r[12] ? String(r[12]).trim() : undefined,
       };
     }).filter(t => t.id);
+
+    // Auto-populate from getTeamSpreadsheetMap if any configured teams are missing from Team_Overview
+    const spreadsheetMap = getTeamSpreadsheetMap();
+    const existingTeamIds = new Set(existingTeams.map(t => t.id.toLowerCase()));
+    const missingTeamEntries = Object.entries(spreadsheetMap).filter(([id]) => !existingTeamIds.has(id.toLowerCase()));
+
+    if (missingTeamEntries.length > 0) {
+      const nowIso = new Date().toISOString();
+      const rowsToAppend: any[][] = [];
+      const newlyAddedTeams: TeamOverview[] = [];
+
+      for (const [teamId, sheetId] of missingTeamEntries) {
+        const meta = STANDARD_COMMITTEE_METADATA[teamId] || {
+          name: `Team ${teamId.replace('team-', '')} Committee`,
+          department: 'Operations',
+          description: `Operations and checklist coordination for ${teamId}`,
+        };
+
+        const newTeam: TeamOverview = {
+          id: teamId,
+          name: meta.name,
+          spreadsheetId: sheetId,
+          totalTasks: 0,
+          completedTasks: 0,
+          pendingTasks: 0,
+          completionPercentage: 0,
+          latestPendingTask: 'No tasks assigned yet.',
+          lastUpdated: nowIso,
+          status: 'Active',
+          department: meta.department,
+          headEmail: undefined,
+          description: meta.description,
+        };
+
+        newlyAddedTeams.push(newTeam);
+        rowsToAppend.push([
+          teamId,
+          meta.name,
+          sheetId,
+          '0',
+          '0',
+          '0',
+          '0',
+          'No tasks assigned yet.',
+          nowIso,
+          'Active',
+          meta.department,
+          '',
+          meta.description,
+        ]);
+      }
+
+      try {
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: masterId,
+          range: "'Team_Overview'!A:M",
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: rowsToAppend },
+        });
+        existingTeams.push(...newlyAddedTeams);
+      } catch (appendErr) {
+        console.warn('Could not persist auto-populated teams to Master Sheet Team_Overview:', appendErr);
+        existingTeams.push(...newlyAddedTeams);
+      }
+    }
+
+    return existingTeams;
   };
 
   try {

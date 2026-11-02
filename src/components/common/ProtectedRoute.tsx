@@ -35,6 +35,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Super Admin required
   if (requiredRole === 'admin' && !isAdmin) {
+    if (assignedTeamId) {
+      return <Navigate to={`/teams/${assignedTeamId}`} replace />;
+    }
     return <Navigate to="/access-denied" replace />;
   }
 

@@ -7,8 +7,8 @@ interface AuthContextType {
   user: UserProfile | null;
   isLoading: boolean;
   error: string | null;
-  login: (credential: string) => Promise<void>;
-  loginWithDevPersona: (personaKey: string) => Promise<void>;
+  login: (credential: string) => Promise<UserProfile>;
+  loginWithDevPersona: (personaKey: string) => Promise<UserProfile>;
   logout: () => Promise<void>;
   isAdmin: boolean;
   isTeamHead: boolean;
@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkSession();
   }, [checkSession]);
 
-  const login = async (credential: string) => {
+  const login = async (credential: string): Promise<UserProfile> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -55,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.csrfToken) {
         setCsrfToken(data.csrfToken);
       }
+      return data.user;
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check credentials or contact administrator.');
       throw err;
@@ -63,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const loginWithDevPersona = async (personaKey: string) => {
+  const loginWithDevPersona = async (personaKey: string): Promise<UserProfile> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -72,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.csrfToken) {
         setCsrfToken(data.csrfToken);
       }
+      return data.user;
     } catch (err: any) {
       setError(err.message || 'Dev login failed.');
       throw err;

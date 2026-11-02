@@ -3,6 +3,7 @@ import * as jose from 'jose';
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { UserProfile, UserRole } from '../../src/types';
 import type { AuthUserContext } from './types';
+export type { AuthUserContext };
 import { findUserByEmail, upsertUser, fetchUsersList } from './sheets';
 import { parseCookies } from './csrf';
 
