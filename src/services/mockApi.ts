@@ -1,5 +1,6 @@
 import type {
   UserProfile,
+  UserRole,
   TeamOverview,
   Task,
   TaskStatus,
@@ -14,7 +15,12 @@ import type {
 export const isDevBypassEnabled = (): boolean => {
   return (
     import.meta.env.DEV ||
-    import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true'
+    import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true' ||
+    (typeof window !== 'undefined' && (
+      window.location.hostname.includes('github.io') ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1'
+    ))
   );
 };
 
@@ -361,6 +367,8 @@ interface MockDataStore {
   activity: GlobalActivityItem[];
 }
 
+let memoryStore: MockDataStore | null = null;
+
 function loadStore(): MockDataStore {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
@@ -371,6 +379,8 @@ function loadStore(): MockDataStore {
     } catch (e) {
       // fallback
     }
+  } else if (memoryStore) {
+    return memoryStore;
   }
 
   const initialStore: MockDataStore = {
@@ -403,33 +413,124 @@ function loadStore(): MockDataStore {
     ],
   };
 
+  memoryStore = initialStore;
   saveStore(initialStore);
   return initialStore;
 }
 
-function saveStore(store: MockDataStore) {
+function safeSetItem(key: string, value: string) {
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
-      window.localStorage.setItem(STORAGE_KEY_STORE, JSON.stringify(store));
+      window.localStorage.setItem(key, value);
     } catch (e) {
-      console.warn('Failed to persist mock store to localStorage:', e);
+      // ignore
     }
   }
+}
+
+function safeGetItem(key: string): string | null {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function safeRemoveItem(key: string) {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch (e) {
+      // ignore
+    }
+  }
+}
+
+function saveStore(store: MockDataStore) {
+  memoryStore = store;
+  safeSetItem(STORAGE_KEY_STORE, JSON.stringify(store));
 }
 
 export const mockApi = {
   loginWithDevPersona(personaKey: string): { user: UserProfile; csrfToken: string } {
     const user = DEV_TEST_PERSONAS[personaKey] || DEV_TEST_PERSONAS.admin;
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
+    safeSetItem(STORAGE_KEY_USER, JSON.stringify(user));
     return {
       user,
       csrfToken: 'mock-csrf-token-' + Date.now(),
     };
   },
 
+  loginWithDevEmail(email: string): { user: UserProfile; csrfToken: string } {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      throw new Error('Please enter a valid email address.');
+    }
+    const store = loadStore();
+
+    // 1. Check exact match in DEV_TEST_PERSONAS
+    const personaEntry = Object.values(DEV_TEST_PERSONAS).find(
+      p => p.email.toLowerCase() === cleanEmail
+    );
+    if (personaEntry) {
+      safeSetItem(STORAGE_KEY_USER, JSON.stringify(personaEntry));
+      return { user: personaEntry, csrfToken: 'mock-csrf-token-' + Date.now() };
+    }
+
+    // 2. Check match in store.users
+    const existingUser = store.users.find(u => u.email.toLowerCase() === cleanEmail);
+    if (existingUser) {
+      safeSetItem(STORAGE_KEY_USER, JSON.stringify(existingUser));
+      return { user: existingUser, csrfToken: 'mock-csrf-token-' + Date.now() };
+    }
+
+    // 3. Dynamic provisioning based on email keyword or fallback viewer
+    let role: UserRole = 'viewer';
+    let teamId: string = 'all';
+    const emailPrefix = cleanEmail.split('@')[0] || 'viewer';
+    const name = emailPrefix
+      .replace(/[._-]/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+
+    if (cleanEmail.includes('admin') || cleanEmail.includes('director')) {
+      role = 'admin';
+      teamId = 'all';
+    } else if (cleanEmail.includes('scientific') || cleanEmail.includes('eng')) {
+      role = 'team_head';
+      teamId = 'team-scientific';
+    } else if (cleanEmail.includes('cme') || cleanEmail.includes('ops')) {
+      role = 'team_head';
+      teamId = 'team-cme-workshops';
+    } else if (cleanEmail.includes('lead') || cleanEmail.includes('head')) {
+      role = 'team_head';
+      teamId = store.teams[0]?.id || 'team-scientific';
+    }
+
+    const newUser: UserProfile = {
+      id: `USR-DEMO-${Date.now().toString().slice(-4)}`,
+      name: `${name} (Demo User)`,
+      email: cleanEmail,
+      role,
+      teamId,
+      active: true,
+    };
+
+    store.users.push(newUser);
+    saveStore(store);
+
+    safeSetItem(STORAGE_KEY_USER, JSON.stringify(newUser));
+    return {
+      user: newUser,
+      csrfToken: 'mock-csrf-token-' + Date.now(),
+    };
+  },
+
   getCurrentUser(): UserProfile | null {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_USER);
+      const raw = safeGetItem(STORAGE_KEY_USER);
       if (raw) return JSON.parse(raw);
     } catch (e) {
       // ignore
@@ -438,12 +539,12 @@ export const mockApi = {
   },
 
   clearSession() {
-    localStorage.removeItem(STORAGE_KEY_USER);
+    safeRemoveItem(STORAGE_KEY_USER);
   },
 
   resetStore() {
-    localStorage.removeItem(STORAGE_KEY_STORE);
-    localStorage.removeItem(STORAGE_KEY_USER);
+    safeRemoveItem(STORAGE_KEY_STORE);
+    safeRemoveItem(STORAGE_KEY_USER);
   },
 
   getTeams(): TeamOverview[] {
@@ -602,14 +703,18 @@ export const mockApi = {
 
   createTask(teamId: string, taskData: Partial<Task>): Task {
     const store = loadStore();
-    const tasks = store.tasksByTeam[teamId] || [];
+    const resolvedId =
+      teamId === 'team-engineering' && !store.tasksByTeam['team-engineering'] && store.tasksByTeam['team-scientific']
+        ? 'team-scientific'
+        : teamId;
+    const tasks = store.tasksByTeam[resolvedId] || store.tasksByTeam[teamId] || [];
     const maxOrder = tasks.reduce((max, t) => Math.max(max, t.displayOrder), 0);
 
     const newTask: Task = {
       id: `TSK-${Date.now().toString().slice(-6)}`,
       title: taskData.title || 'New Task',
       description: taskData.description || '',
-      category: taskData.category || 'Backend & Infrastructure',
+      category: taskData.category || 'Scientific & Clinical Program',
       isMandatory: taskData.isMandatory ?? true,
       status: taskData.status || 'Pending',
       priority: taskData.priority || 'Medium',
@@ -622,9 +727,94 @@ export const mockApi = {
     };
 
     tasks.push(newTask);
-    store.tasksByTeam[teamId] = tasks;
+    store.tasksByTeam[resolvedId] = tasks;
+    if (resolvedId !== teamId) {
+      store.tasksByTeam[teamId] = tasks;
+    }
     saveStore(store);
     return newTask;
+  },
+
+  editTask(teamId: string, taskId: string, taskData: Partial<Task>): Task {
+    const store = loadStore();
+    const resolvedId =
+      teamId === 'team-engineering' && !store.tasksByTeam['team-engineering'] && store.tasksByTeam['team-scientific']
+        ? 'team-scientific'
+        : teamId;
+    const tasks = store.tasksByTeam[resolvedId] || store.tasksByTeam[teamId] || [];
+    const index = tasks.findIndex(t => t.id === taskId);
+    if (index === -1) {
+      throw new Error(`Task ${taskId} not found in team ${teamId}.`);
+    }
+
+    tasks[index] = {
+      ...tasks[index],
+      ...taskData,
+      updatedAt: new Date().toISOString(),
+    };
+    if (taskData.status === 'Completed') {
+      tasks[index].completedAt = new Date().toISOString();
+    } else if (taskData.status === 'Pending') {
+      tasks[index].completedAt = undefined;
+    }
+
+    // Recalculate metrics
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status === 'Completed').length;
+    const pending = tasks.filter(t => t.status === 'Pending').length;
+    const pct = total > 0 ? Math.round((completed / total) * 10000) / 100 : 0;
+    const firstPending = tasks.filter(t => t.status === 'Pending').sort((a, b) => a.displayOrder - b.displayOrder)[0];
+    const latestPending = firstPending ? firstPending.title : 'All tasks completed.';
+
+    const teamIndex = store.teams.findIndex(t => t.id === resolvedId || t.id === teamId);
+    if (teamIndex !== -1) {
+      store.teams[teamIndex].completedTasks = completed;
+      store.teams[teamIndex].pendingTasks = pending;
+      store.teams[teamIndex].completionPercentage = pct;
+      store.teams[teamIndex].latestPendingTask = latestPending;
+      store.teams[teamIndex].lastUpdated = new Date().toISOString();
+    }
+
+    store.tasksByTeam[resolvedId] = tasks;
+    if (resolvedId !== teamId) {
+      store.tasksByTeam[teamId] = tasks;
+    }
+    saveStore(store);
+    return tasks[index];
+  },
+
+  deleteTask(teamId: string, taskId: string): void {
+    const store = loadStore();
+    const resolvedId =
+      teamId === 'team-engineering' && !store.tasksByTeam['team-engineering'] && store.tasksByTeam['team-scientific']
+        ? 'team-scientific'
+        : teamId;
+    let tasks = store.tasksByTeam[resolvedId] || store.tasksByTeam[teamId] || [];
+    tasks = tasks.filter(t => t.id !== taskId);
+    store.tasksByTeam[resolvedId] = tasks;
+    if (resolvedId !== teamId) {
+      store.tasksByTeam[teamId] = tasks;
+    }
+
+    // Recalculate metrics
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status === 'Completed').length;
+    const pending = tasks.filter(t => t.status === 'Pending').length;
+    const pct = total > 0 ? Math.round((completed / total) * 10000) / 100 : 0;
+    const firstPending = tasks.filter(t => t.status === 'Pending').sort((a, b) => a.displayOrder - b.displayOrder)[0];
+    const latestPending = firstPending ? firstPending.title : 'All tasks completed.';
+
+    const teamIndex = store.teams.findIndex(t => t.id === resolvedId || t.id === teamId);
+    if (teamIndex !== -1) {
+      store.teams[teamIndex].totalTasks = total;
+      store.teams[teamIndex].completedTasks = completed;
+      store.teams[teamIndex].pendingTasks = pending;
+      store.teams[teamIndex].completionPercentage = pct;
+      store.teams[teamIndex].latestPendingTask = latestPending;
+      store.teams[teamIndex].lastUpdated = new Date().toISOString();
+    }
+
+    saveStore(store);
   },
 
   reorderTasks(teamId: string, taskIds: string[]) {

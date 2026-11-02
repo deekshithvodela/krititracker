@@ -7,7 +7,7 @@ import './styles/index.css';
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(`${import.meta.env.BASE_URL}sw.js`)
       .then(reg => {
         console.log('✅ PWA Service Worker registered successfully with scope:', reg.scope);
       })

@@ -108,6 +108,29 @@ export const api = {
     return mockRes;
   },
 
+  async loginWithDevEmail(email: string): Promise<{ user: UserProfile; csrfToken: string }> {
+    if (!isDevBypassEnabled()) {
+      throw new Error('Dev login bypass is disabled.');
+    }
+
+    try {
+      const res = await apiFetch<{ user: UserProfile; csrfToken: string }>('/api/auth/dev-login', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      if (res.data) {
+        mockApi.loginWithDevEmail(email);
+        return res.data;
+      }
+    } catch (e) {
+      // Local preview, GitHub Pages, or offline fallback
+    }
+
+    const mockRes = mockApi.loginWithDevEmail(email);
+    setCsrfToken(mockRes.csrfToken);
+    return mockRes;
+  },
+
   async getSession(): Promise<{ user: UserProfile; csrfToken: string }> {
     if (isDevBypassEnabled()) {
       const mockUser = mockApi.getCurrentUser();
@@ -274,18 +297,66 @@ export const api = {
   },
 
   async editTask(teamId: string, taskId: string, taskData: Partial<Task>): Promise<{ task: Task; sync: SyncResult }> {
-    const res = await apiFetch<any>(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ teamId, ...taskData }),
-    });
-    return res.data!;
+    if (isDevBypassEnabled() && mockApi.getCurrentUser()) {
+      const task = mockApi.editTask(teamId, taskId, taskData);
+      const team = mockApi.getTeamTasks(teamId);
+      return {
+        task,
+        sync: {
+          teamId,
+          totalTasks: team.metrics.totalTasks,
+          completedTasks: team.metrics.completedTasks,
+          pendingTasks: team.metrics.pendingTasks,
+          completionPercentage: team.metrics.completionPercentage,
+          latestPendingTask: team.metrics.latestPendingTask,
+          masterSynced: true,
+        },
+      };
+    }
+    try {
+      const res = await apiFetch<any>(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ teamId, ...taskData }),
+      });
+      return res.data!;
+    } catch (err) {
+      if (isDevBypassEnabled()) {
+        const task = mockApi.editTask(teamId, taskId, taskData);
+        const team = mockApi.getTeamTasks(teamId);
+        return {
+          task,
+          sync: {
+            teamId,
+            totalTasks: team.metrics.totalTasks,
+            completedTasks: team.metrics.completedTasks,
+            pendingTasks: team.metrics.pendingTasks,
+            completionPercentage: team.metrics.completionPercentage,
+            latestPendingTask: team.metrics.latestPendingTask,
+            masterSynced: true,
+          },
+        };
+      }
+      throw err;
+    }
   },
 
   async deleteTask(teamId: string, taskId: string): Promise<void> {
-    await apiFetch(`/api/tasks/${taskId}`, {
-      method: 'DELETE',
-      body: JSON.stringify({ teamId }),
-    });
+    if (isDevBypassEnabled() && mockApi.getCurrentUser()) {
+      mockApi.deleteTask(teamId, taskId);
+      return;
+    }
+    try {
+      await apiFetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ teamId }),
+      });
+    } catch (err) {
+      if (isDevBypassEnabled()) {
+        mockApi.deleteTask(teamId, taskId);
+        return;
+      }
+      throw err;
+    }
   },
 
   async reorderTasks(teamId: string, orderedTaskIds: string[]): Promise<{ tasks?: Task[]; sync?: SyncResult }> {

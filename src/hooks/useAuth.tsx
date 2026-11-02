@@ -9,6 +9,7 @@ interface AuthContextType {
   error: string | null;
   login: (credential: string) => Promise<UserProfile>;
   loginWithDevPersona: (personaKey: string) => Promise<UserProfile>;
+  loginWithDevEmail: (email: string) => Promise<UserProfile>;
   logout: () => Promise<void>;
   isAdmin: boolean;
   isTeamHead: boolean;
@@ -82,6 +83,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithDevEmail = async (email: string): Promise<UserProfile> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await api.loginWithDevEmail(email);
+      setUser(data.user);
+      if (data.csrfToken) {
+        setCsrfToken(data.csrfToken);
+      }
+      return data.user;
+    } catch (err: any) {
+      setError(err.message || 'Dev email login failed.');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       await api.logout();
@@ -104,6 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error,
         login,
         loginWithDevPersona,
+        loginWithDevEmail,
         logout,
         isAdmin,
         isTeamHead,

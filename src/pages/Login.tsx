@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
-import { ShieldCheck, CheckSquare, Layers, Lock, AlertCircle, ArrowRight, Sparkles, FlaskConical, ExternalLink } from 'lucide-react';
+import { ShieldCheck, CheckSquare, Layers, Lock, AlertCircle, ArrowRight, Sparkles, FlaskConical, ExternalLink, Mail, CheckCircle2, UserCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/ui/Button';
 import { MitLicenseModal } from '../components/legal/MitLicenseModal';
 import { PrivacyPolicyModal } from '../components/legal/PrivacyPolicyModal';
 
 export const Login: React.FC = () => {
-  const { login, loginWithDevPersona, isDevMode } = useAuth();
+  const { login, loginWithDevPersona, loginWithDevEmail, isDevMode } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [devEmailInput, setDevEmailInput] = useState('');
   const [isMitModalOpen, setIsMitModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'dummy-google-client-id.apps.googleusercontent.com';
+
+  const navigateByRole = (authUser: any) => {
+    if (authUser.role === 'admin') {
+      navigate('/admin');
+    } else if (authUser.teamId && authUser.teamId !== 'all') {
+      navigate(`/teams/${authUser.teamId}`);
+    } else {
+      navigate('/admin');
+    }
+  };
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     if (!credentialResponse.credential) {
@@ -27,13 +38,7 @@ export const Login: React.FC = () => {
     setError(null);
     try {
       const authUser = await login(credentialResponse.credential);
-      if (authUser.role === 'admin') {
-        navigate('/admin');
-      } else if (authUser.teamId && authUser.teamId !== 'all') {
-        navigate(`/teams/${authUser.teamId}`);
-      } else {
-        navigate('/');
-      }
+      navigateByRole(authUser);
     } catch (err: any) {
       setError(err.message || 'Access Denied: Your account is not authorized.');
     } finally {
@@ -49,6 +54,26 @@ export const Login: React.FC = () => {
       navigate(targetPath);
     } catch (err: any) {
       setError(err.message || 'Dev login bypass failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDevEmailSubmit = async (e?: React.FormEvent, directEmail?: string) => {
+    if (e) e.preventDefault();
+    const emailToUse = (directEmail || devEmailInput).trim();
+    if (!emailToUse) {
+      setError('Please enter a dev email or select one of the presets below.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const authUser = await loginWithDevEmail(emailToUse);
+      navigateByRole(authUser);
+    } catch (err: any) {
+      setError(err.message || 'Dev email sign-in failed.');
     } finally {
       setIsLoading(false);
     }
@@ -75,21 +100,136 @@ export const Login: React.FC = () => {
               <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2.5">
                 <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  <p className="font-semibold">Authorization Error</p>
+                  <p className="font-semibold">Authorization Notice</p>
                   <p>{error}</p>
                 </div>
               </div>
             )}
 
+            {/* 🧪 Public Demo & Dev-Mail Showcase */}
+            {isDevMode && (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/90 via-slate-50 to-amber-50/80 border border-indigo-200/80 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-indigo-950 text-xs font-bold uppercase tracking-wider">
+                    <Sparkles className="w-4 h-4 text-primary-600 animate-pulse" />
+                    <span>Public Preview & Dev Mails</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-semibold border border-indigo-300">
+                    Live Demo Mode
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-600 leading-relaxed">
+                  Welcome! Try out the complete KRITI Tracker experience using pre-configured <strong className="text-slate-900">Dev Mails</strong> below. All changes (tasks, statuses, teams) persist in your browser session:
+                </p>
+
+                {/* 1-Click Dev Mail Preset Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleDevPersonaLogin('admin', '/admin')}
+                    className="p-2.5 rounded-xl border border-amber-200 bg-white hover:bg-amber-50/80 text-left transition-all shadow-sm group disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-amber-950">👑 Congress Director</span>
+                      <span className="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-semibold">Admin</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-primary-700 mt-0.5 truncate">admin.qa@company.com</p>
+                    <p className="text-[9px] text-slate-400 truncate mt-0.5">Full control across 12 teams</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleDevPersonaLogin('team_head_eng', '/teams/team-scientific')}
+                    className="p-2.5 rounded-xl border border-indigo-200 bg-white hover:bg-indigo-50/80 text-left transition-all shadow-sm group disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-indigo-950">🩺 Scientific Head</span>
+                      <span className="text-[9px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-semibold">Team 01</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-primary-700 mt-0.5 truncate">lead.eng@company.com</p>
+                    <p className="text-[9px] text-slate-400 truncate mt-0.5">Scientific abstracts checklist</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleDevPersonaLogin('team_head_ops', '/teams/team-cme-workshops')}
+                    className="p-2.5 rounded-xl border border-cyan-200 bg-white hover:bg-cyan-50/80 text-left transition-all shadow-sm group disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-cyan-950">💉 CME Workshops</span>
+                      <span className="text-[9px] bg-cyan-100 text-cyan-800 px-1.5 py-0.5 rounded font-semibold">Team 02</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-primary-700 mt-0.5 truncate">lead.ops@company.com</p>
+                    <p className="text-[9px] text-slate-400 truncate mt-0.5">Clinical training & CME credits</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    onClick={() => handleDevPersonaLogin('viewer', '/admin')}
+                    className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition-all shadow-sm group disabled:opacity-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900">👁️ Ethics Auditor</span>
+                      <span className="text-[9px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-semibold">Auditor</span>
+                    </div>
+                    <p className="text-[10px] font-mono text-primary-700 mt-0.5 truncate">auditor.qa@company.com</p>
+                    <p className="text-[9px] text-slate-400 truncate mt-0.5">Read-only ethics oversight</p>
+                  </button>
+                </div>
+
+                {/* Direct Dev Email Input Form */}
+                <form onSubmit={handleDevEmailSubmit} className="pt-2 space-y-2">
+                  <label htmlFor="dev-email-input" className="block text-[11px] font-semibold text-slate-700">
+                    Or Enter Any Dev / Institutional Email:
+                  </label>
+                  <div className="flex items-center gap-1.5">
+                    <div className="relative flex-1">
+                      <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        id="dev-email-input"
+                        type="email"
+                        value={devEmailInput}
+                        onChange={(e) => setDevEmailInput(e.target.value)}
+                        placeholder="e.g. lead.eng@company.com or custom@org.com"
+                        className="w-full pl-8 pr-2 py-1.5 text-xs rounded-lg border border-slate-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-all bg-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading}
+                      className="px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold flex items-center gap-1 shadow-sm transition-all disabled:opacity-50 whitespace-nowrap"
+                    >
+                      <span>Try Mail</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Standard Institutional Sign In Divider & Header */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-slate-400 font-semibold">Institutional Google Sign-In</span>
+              </div>
+            </div>
+
             <div className="text-center space-y-1">
-              <h2 className="text-base font-bold text-slate-900">Sign in to your account</h2>
               <p className="text-xs text-slate-500">
-                Use your whitelisted institutional email to access your assigned medical committee.
+                Authorized corporate accounts with Google Cloud OAuth access:
               </p>
             </div>
 
             {/* Google Sign In Component */}
-            <div className="flex flex-col items-center justify-center pt-2">
+            <div className="flex flex-col items-center justify-center pt-1">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => setError('Google Sign-In encountered an error.')}
@@ -101,74 +241,6 @@ export const Login: React.FC = () => {
                 width="320"
               />
             </div>
-
-            {/* 🧪 QA Testing Auth Bypass (Dev & Local Test Sandbox Only) */}
-            {isDevMode && (
-              <div className="pt-6 border-t-2 border-dashed border-amber-200/90 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-amber-800 text-xs font-bold uppercase tracking-wider">
-                    <FlaskConical className="w-4 h-4 text-amber-600 animate-pulse" />
-                    <span>🧪 QA Testing Auth Bypass</span>
-                  </div>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold border border-amber-300">
-                    Zero-Leak Dev Mode
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-relaxed">
-                  Instant 1-click persona switching for local testing & RBAC verification without requiring live Google OAuth credentials:
-                </p>
-
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => handleDevPersonaLogin('admin', '/admin')}
-                    className="p-2.5 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-left transition-all group disabled:opacity-50"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-amber-950">
-                      <span>👑 Congress Director</span>
-                    </div>
-                    <p className="text-[10px] text-amber-700/80 truncate mt-0.5">All 12 medical committees & Control Centre</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => handleDevPersonaLogin('team_head_eng', '/teams/team-scientific')}
-                    className="p-2.5 rounded-xl border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-left transition-all group disabled:opacity-50"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-indigo-950">
-                      <span>🩺 Scientific Head</span>
-                    </div>
-                    <p className="text-[10px] text-indigo-700/80 truncate mt-0.5">Team 01 Scientific abstracts & review</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => handleDevPersonaLogin('team_head_ops', '/teams/team-cme-workshops')}
-                    className="p-2.5 rounded-xl border border-cyan-200 bg-cyan-50/70 hover:bg-cyan-100 text-left transition-all group disabled:opacity-50"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-cyan-950">
-                      <span>💉 CME Workshops</span>
-                    </div>
-                    <p className="text-[10px] text-cyan-700/80 truncate mt-0.5">Team 02 Clinical training & credits</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isLoading}
-                    onClick={() => handleDevPersonaLogin('viewer', '/admin')}
-                    className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-100 text-left transition-all group disabled:opacity-50"
-                  >
-                    <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900">
-                      <span>👁️ Ethics Auditor</span>
-                    </div>
-                    <p className="text-[10px] text-slate-500 truncate mt-0.5">Medical compliance & ethics observer</p>
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Security badges */}
             <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-3 text-center text-xs text-slate-500">

@@ -7,15 +7,17 @@
     "dev": "vite",
     "build:server": "esbuild server/index.ts --bundle --platform=node --target=node20 --format=esm --external:googleapis --external:google-auth-library --external:jose --external:cookie --external:@vercel/node --outfile=api/index.js",
     "build": "tsc && vite build && npm run build:server",
+    "build:pages": "tsc && vite build --base=/krititracker/",
     "lint": "tsc --noEmit",
-    "preview": "vite preview",
+    "preview": "vite preview --base=/krititracker/",
     "setup-sheets": "tsx scripts/setup-sheets.ts",
     "verify-connection": "tsx scripts/verify-connection.ts",
     "test:dev-login": "tsx scripts/test-dev-login.ts",
     "generate-icons": "tsx scripts/generate-pwa-icons.ts",
     "generate-og": "tsx scripts/generate-og-images.ts",
     "test:phase15": "tsx scripts/test-phase15.ts",
-    "test:phase20": "tsx scripts/test-phase20.ts"
+    "test:phase20": "tsx scripts/test-phase20.ts",
+    "test:phase24": "tsx scripts/test-phase24.ts"
   },
   "dependencies": {
     "@react-oauth/google": "^0.12.1",
